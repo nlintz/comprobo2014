@@ -32,11 +32,12 @@ def charToCommand(char):
     return Twist()
 
 def teleop():
-    telopPublisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+    telopPublisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=10)
     rospy.init_node('teleop', anonymous=True)
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         char = getch()
         msg = charToCommand(char)
+        print msg
         telopPublisher.publish(msg)
         r.sleep()
