@@ -20,8 +20,8 @@ class WallFollower(object):
     def __init__(self, targetDistance=1, targetAngle=90):
         self.targetDistance = targetDistance
         self.targetAngle = targetAngle
-        # self._velocityPublisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=10)
-        self._velocityPublisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        self._velocityPublisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=10)
+        # self._velocityPublisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         self._scanSubscriber = rospy.Subscriber('scan', LaserScan, self._onScan)
         
         self._angleController = PIDController(self.targetAngle, 0.02, 0.0001, 0.00)
@@ -82,7 +82,7 @@ class WallFollower(object):
         readings = self._filterReadings(msg.ranges)
         angle = self._wallAngle(readings)
 
-        distance = self._sampleReadings(readings, angle, angle + 2)
+        distance = self._sampleReadings(readings, angle, angle + 5)
         distance = readings[angle]
         if distance:
             self._states[self._currentState](angle, distance)
