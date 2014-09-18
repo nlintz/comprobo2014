@@ -30,6 +30,10 @@ class WallFollower(object):
         self._states = {"followWall":self._followWall, "teleop":self._teleop}
         self._currentState = "followWall"
         self._keyDirection = None
+        self._stop = False
+
+    def stop():
+        self._stop = True
 
     @property 
     def state(self):
@@ -100,9 +104,6 @@ class WallFollower(object):
         self._velocityMessage.angular.z = parallelFeedback + 2.25 * distanceFeedback
         self._velocityMessage.linear.x = 0.35
 
-    def _stop(self):
-        self._velocityMessage = Twist()
-
     def _teleop(self, angle, distance):
         char = self.key
         if char == 'w':
@@ -118,12 +119,14 @@ class WallFollower(object):
         """ main behavior of wall follower class
 
         """
+        self._stop = False
         rospy.init_node('wall_follower', anonymous=True)
         r = rospy.Rate(10)
 
         while not rospy.is_shutdown():
-            self._velocityPublisher.publish(self._velocityMessage)
-            r.sleep()
+            if not self._stop:
+                self._velocityPublisher.publish(self._velocityMessage)
+                r.sleep()
 
 if __name__ == '__main__':
     wallFollower = WallFollower(.6)

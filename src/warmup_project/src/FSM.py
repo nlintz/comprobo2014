@@ -15,8 +15,10 @@ class FiniteStateMachine(object):
 	def _onScan(self, msg):
 		if min(msg.ranges) < .5:
 			self._wallFollower.run()
+			self._obstacleAvoider.stop()
 		else:
 			self._obstacleAvoider.run()
+			self._wallFollower.stop()
 
 if __name__ == "__main__":
 	fsm = FiniteStateMachine()

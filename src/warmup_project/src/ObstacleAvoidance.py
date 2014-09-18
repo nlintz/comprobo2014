@@ -25,6 +25,10 @@ class ObstacleAvoider(object):
         self._currentAngle = None
 
         self._angleController = PIDController(targetAngle, 0.2, 0.001, 0.02)
+        self._stop = False
+
+    def stop():
+        self._stop = True
 
     @staticmethod
     def _filterReadings(data, lowerBound=0.0, upperBound=10.0):
@@ -74,12 +78,14 @@ class ObstacleAvoider(object):
         """ main behavior of obstacle avoider class
 
         """
+        self._stop = False
         rospy.init_node('obstacle_avoider', anonymous=True)
         r = rospy.Rate(10)
 
         while not rospy.is_shutdown():
-            self._velocityPublisher.publish(self._velocityMessage)
-            r.sleep()
+            if not self._stop:
+                self._velocityPublisher.publish(self._velocityMessage)
+                r.sleep()
 
 if __name__ == "__main__":
 	obstacleAvoider = ObstacleAvoider()
