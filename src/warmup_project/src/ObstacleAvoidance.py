@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
 
 import rospy
 from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, Vector3
 
 from PIDController import PIDController
@@ -13,21 +14,29 @@ class ObstacleAvoider(object):
     """ Class for handling wall following behavior
 
     """
-    def __init__(self):
+    def __init__(self, pullForce=0.5, obstacleScaleFactor=1.0):
         self._velocityPublisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=10)
         self._scanSubscriber = rospy.Subscriber('scan', LaserScan, self._onScan)
+        self._odomSubscriber = rospy.Subscriber('odom', Odometry, self._onOdom)
         self._velocityMessage = Twist()
+        self._pullForce = pullForce
+        self._obstacleScaleFactor = obstacleScaleFactor
 
     @staticmethod
     def _filterReadings(data, lowerBound=0.0, upperBound=10.0):
         return map(lambda x: x if x > lowerBound and x <= upperBound else float("inf"), data)
 
     def _sumComponentForces(self, angleDistances):
-    	print 'sum components'
+    	# print angleDistances
+        return
+
+    def _onOdom(self, msg):
+        print msg
 
     def _onScan(self, msg):
     	readings = self._filterReadings(msg.ranges)
     	desiredAngle = self._sumComponentForces(zip(range(360), readings))
+        self._velocityMessage = Twist(angular=Vector3(z=.1))
 
 
     def run(self):
