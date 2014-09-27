@@ -1,0 +1,5 @@
+ <launch>
+    <node pkg="warmup_project" type="WallDetector.py"
+      name="wall_detector" />
+
+</launch>

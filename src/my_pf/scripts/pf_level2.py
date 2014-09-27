@@ -331,6 +331,7 @@ class ParticleFilter:
 			This is necessary so things like move_base can work properly. """
 		if not(hasattr(self,'translation') and hasattr(self,'rotation')):
 			return
+		print self._odom_frame, self.map_frame
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
