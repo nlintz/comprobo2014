@@ -384,7 +384,9 @@ class ParticleFilter:
 		""" Make sure that we are always broadcasting the last map to odom transformation.
 			This is necessary so things like move_base can work properly. """
 		if not(hasattr(self,'translation') and hasattr(self,'rotation')):
+			print 'no attrs'
 			return
+		print 'has attrs'
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
