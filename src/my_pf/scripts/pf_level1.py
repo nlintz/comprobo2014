@@ -228,10 +228,21 @@ class ParticleFilter:
 				(1): compute the mean pose (level 2)
 				(2): compute the most likely pose (i.e. the mode of the distribution) (level 1)
 		"""
-		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
+		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object -- DONE
+		# NOTE - CHECK IF THIS IS VALID INTERPRETATION OF MEAN POSE
 
 		# first make sure that the particle weights are normalized
 		self.normalize_particles()
+		meanX, meanY, meanTheta = 0, 0, 0
+		for particle in self.particle_cloud:
+			meanX += particle.x * particle.w
+			meanY += particle.y * particle.w
+			meanTheta += particle.theta * particle.w
+		meanX, meanY, meanTheta = meanX / float(self.n_particles), meanY / float(self.n_particles), meanTheta / float(self.n_particles)
+
+		meanPose = Particle(meanX, meanY, meanTheta)
+		self.robot_pose = meanPose.as_pose()
+
 
 	def update_particles_with_odom(self, msg):
 		""" Implement a simple version of this (Level 1) or a more complex one (Level 2) """
@@ -385,7 +396,6 @@ class ParticleFilter:
 		self.publish_particles(msg)
 
 	def fix_map_to_odom_transform(self, msg):
-		print 'fix map to odom transform'
 		""" Super tricky code to properly update map to odom transform... do not modify this... Difficulty level infinity. """
 		(translation, rotation) = TransformHelpers.convert_pose_inverse_transform(self.robot_pose)
 		p = PoseStamped(pose=TransformHelpers.convert_translation_rotation_to_pose(translation,rotation),header=Header(stamp=msg.header.stamp,frame_id=self.base_frame))
