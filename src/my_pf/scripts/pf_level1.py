@@ -18,6 +18,7 @@ import time
 
 import numpy as np
 from numpy.random import random_sample
+from numpy.random import normal
 from sklearn.neighbors import NearestNeighbors
 
 class TransformHelpers:
@@ -187,6 +188,8 @@ class ParticleFilter:
 		self.laser_max_distance = 2.0	# maximum penalty to assess in the likelihood field model
 
 		# TODO: define additional constants if needed
+		self._initial_particle_cloud_ordinal_sigma = 2.0
+		self._initial_particle_cloud_angular_sigma = math.pi / 2.0
 
 		# Setup pubs and subs
 
@@ -208,7 +211,7 @@ class ParticleFilter:
 
 		# request the map from the map server, the map should be of type nav_msgs/OccupancyGrid
 		# TODO: fill in the appropriate service call here.  The resultant map should be assigned be passed
-		#		into the init method for OccupancyField
+		#		into the init method for OccupancyField -- DONE
 		rospy.wait_for_service('static_map')
 		try:
 			getStaticMap = rospy.ServiceProxy('static_map',GetMap)
@@ -308,17 +311,25 @@ class ParticleFilter:
 			Arguments
 			xy_theta: a triple consisting of the mean x, y, and theta (yaw) to initialize the
 					  particle cloud around.  If this input is ommitted, the odometry will be used """
+		# TODO: implement this -- DONE
 		if xy_theta == None:
 			xy_theta = TransformHelpers.convert_pose_to_xy_and_theta(self.odom_pose.pose)
 		self.particle_cloud = []
-		# TODO create particles
+		for i in range(self.n_particles):
+			x = normal(xy_theta[0], self._initial_particle_cloud_ordinal_sigma)
+			y = normal(xy_theta[1], self._initial_particle_cloud_ordinal_sigma)
+			theta = math.radians(normal(xy_theta[2], self._initial_particle_cloud_angular_sigma))
+			self.particle_cloud.append(Particle(x, y, theta))
 
 		self.normalize_particles()
 		self.update_robot_pose()
 
 	def normalize_particles(self):
 		""" Make sure the particle weights define a valid distribution (i.e. sum to 1.0) """
-		# TODO: implement this
+		# TODO: implement this -- DONE
+		totalWeight = sum(map(lambda x: x.w, self.particle_cloud))
+		for particle in self.particle_cloud:
+			particle.w = particle.w / totalWeight
 
 	def publish_particles(self, msg):
 		particles_conv = []
@@ -374,6 +385,7 @@ class ParticleFilter:
 		self.publish_particles(msg)
 
 	def fix_map_to_odom_transform(self, msg):
+		print 'fix map to odom transform'
 		""" Super tricky code to properly update map to odom transform... do not modify this... Difficulty level infinity. """
 		(translation, rotation) = TransformHelpers.convert_pose_inverse_transform(self.robot_pose)
 		p = PoseStamped(pose=TransformHelpers.convert_translation_rotation_to_pose(translation,rotation),header=Header(stamp=msg.header.stamp,frame_id=self.base_frame))
@@ -384,16 +396,14 @@ class ParticleFilter:
 		""" Make sure that we are always broadcasting the last map to odom transformation.
 			This is necessary so things like move_base can work properly. """
 		if not(hasattr(self,'translation') and hasattr(self,'rotation')):
-			print 'no attrs'
 			return
-		print 'has attrs'
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
 	n = ParticleFilter()
 	r = rospy.Rate(5)
-
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
 		n.broadcast_last_transform()
+		print "BROADCASTING"
 		r.sleep()
