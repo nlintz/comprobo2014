@@ -19,6 +19,7 @@ import time
 import numpy as np
 from numpy.random import random_sample
 from numpy.random import normal
+from numpy.random import choice
 from sklearn.neighbors import NearestNeighbors
 
 class TransformHelpers:
@@ -272,7 +273,12 @@ class ParticleFilter:
 		""" Resample the particles according to the new particle weights """
 		# make sure the distribution is normalized
 		self.normalize_particles()
+		
 		# TODO: fill out the rest of the implementation
+		# NOTE: Add In Gaussian Noise
+		weights = map(lambda x: x.w, self.particle_cloud)
+		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
+		self.particle_cloud = map(lambda x: self.particle_cloud[x], new_particle_indices)
 
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
