@@ -21,6 +21,7 @@ from numpy.random import random_sample
 from numpy.random import normal
 from numpy.random import choice
 from sklearn.neighbors import NearestNeighbors
+from scipy.stats import norm
 
 class TransformHelpers:
 	""" Some convenience functions for translating between various representions of a robot pose.
@@ -191,6 +192,7 @@ class ParticleFilter:
 		# TODO: define additional constants if needed
 		self._initial_particle_cloud_ordinal_sigma = 2.0
 		self._initial_particle_cloud_angular_sigma = math.pi / 2.0
+		self._distance_likelihood_sigma = 0.5
 
 		# Setup pubs and subs
 
@@ -274,7 +276,7 @@ class ParticleFilter:
 		# make sure the distribution is normalized
 		self.normalize_particles()
 		
-		# TODO: fill out the rest of the implementation
+		# TODO: fill out the rest of the implementation -- DONE
 		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
 		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
@@ -282,7 +284,15 @@ class ParticleFilter:
 
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
-		# TODO: implement this
+		# TODO: implement this -- DONE
+		laser_data = msg.ranges
+		min_laser_scan = min(laser_data)
+		normal = norm(min_laser_scan, self._distance_likelihood_sigma)
+
+		for particle in self.particle_field:
+			closest_object = self.occupancy_field.get_closest_obstacle_distance(particle.x, particle.y)	
+			#right now we are reassigning the weight completely.  Concider writing this such that we factor in the old weight.
+			particle.w = normal.pdf(closest_object)
 		pass
 
 	@staticmethod
