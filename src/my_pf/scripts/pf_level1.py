@@ -15,6 +15,7 @@ from random import gauss
 
 import math
 import time
+import random
 
 import numpy as np
 from numpy.random import random_sample
@@ -191,7 +192,7 @@ class ParticleFilter:
 
 		# TODO: define additional constants if needed
 		self._initial_particle_cloud_ordinal_sigma = 2.0
-		self._initial_particle_cloud_angular_sigma = math.pi / 2.0
+		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
 		self._distance_likelihood_sigma = 0.5
 
 		# Setup pubs and subs
@@ -243,8 +244,8 @@ class ParticleFilter:
 			meanTheta += particle.theta * particle.w
 		meanX, meanY, meanTheta = meanX / float(self.n_particles), meanY / float(self.n_particles), meanTheta / float(self.n_particles)
 
-		meanPose = Particle(meanX, meanY, meanTheta)
-		self.robot_pose = meanPose.as_pose()
+		mean_pose_particle = Particle(meanX, meanY, meanTheta)
+		self.robot_pose = mean_pose_particle.as_pose()
 
 
 	def update_particles_with_odom(self, msg):
@@ -261,10 +262,14 @@ class ParticleFilter:
 
 		# TODO: modify particles using delta -- DONE
 		# For added difficulty: Implement sample_motion_odometry (Prob Rob p 136)
+		magnitude = math.sqrt(delta[0] ** 2 + delta[1] ** 2)
 		for particle in self.particle_cloud:
-			particle.x += delta[0]
-			particle.y += delta[1]
-			particle.z += delta[2]
+			# particle.x += delta[0]
+			newTheta = delta[2] + particle.theta
+			particle.x += magnitude * math.cos(newTheta)
+			particle.y += magnitude * math.sin(newTheta)
+			# particle.y += delta[1]
+			particle.theta += delta[2]
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -279,6 +284,7 @@ class ParticleFilter:
 		# TODO: fill out the rest of the implementation -- DONE
 		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
+		# print self.n_particles, weights
 		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
 		self.particle_cloud = map(lambda x: self.particle_cloud[x], new_particle_indices)
 
@@ -288,12 +294,13 @@ class ParticleFilter:
 		laser_data = msg.ranges
 		min_laser_scan = min(laser_data)
 		normal = norm(min_laser_scan, self._distance_likelihood_sigma)
-
-		for particle in self.particle_field:
-			closest_object = self.occupancy_field.get_closest_obstacle_distance(particle.x, particle.y)	
-			#right now we are reassigning the weight completely.  Concider writing this such that we factor in the old weight.
-			particle.w = normal.pdf(closest_object)
-		pass
+		for particle in self.particle_cloud:
+			closest_object = self.occupancy_field.get_closest_obstacle_distance(particle.x, particle.y)
+			if closest_object != float("nan"):
+				#right now we are reassigning the weight completely.  Concider writing this such that we factor in the old weight.
+				# print closest_object
+				particle.w = normal.pdf(closest_object[0])
+		
 
 	@staticmethod
 	def angle_normalize(z):
@@ -349,7 +356,7 @@ class ParticleFilter:
 		for i in range(self.n_particles):
 			x = normal(xy_theta[0], self._initial_particle_cloud_ordinal_sigma)
 			y = normal(xy_theta[1], self._initial_particle_cloud_ordinal_sigma)
-			theta = math.radians(normal(xy_theta[2], self._initial_particle_cloud_angular_sigma))
+			theta = normal(xy_theta[2], self._initial_particle_cloud_angular_sigma) # What units are xy_theta in (we assume radians)
 			self.particle_cloud.append(Particle(x, y, theta))
 
 		self.normalize_particles()
@@ -435,5 +442,5 @@ if __name__ == '__main__':
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
 		n.broadcast_last_transform()
-		print "BROADCASTING"
+		print "Running"
 		r.sleep()
