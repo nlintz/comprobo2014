@@ -133,6 +133,7 @@ class OccupancyField:
 			for j in range(self.map.info.height):
 				ind = i + j*self.map.info.width
 				self.closest_occ[ind] = distances[curr]*self.map.info.resolution
+				#self.closest_occ[ind] = distances[curr][0]*self.map.info.resolution
 				curr += 1
 
 	def get_closest_obstacle_distance(self,x,y):
@@ -224,6 +225,10 @@ class ParticleFilter:
 		except rospy.ServiceException, e:
 			print "Service called failed %s" % e
 		self.occupancy_field = OccupancyField(map)
+		#		into the init method for OccupancyField
+
+		# for now we have commented out the occupancy field initialization until you can successfully fetch the map
+		#self.occupancy_field = OccupancyField(map)
 		self.initialized = True
 
 	def update_robot_pose(self):
@@ -234,7 +239,6 @@ class ParticleFilter:
 		"""
 		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object -- DONE
 		# NOTE - CHECK IF THIS IS VALID INTERPRETATION OF MEAN POSE
-
 		# first make sure that the particle weights are normalized
 		self.normalize_particles()
 		meanX, meanY, meanTheta = 0, 0, 0
@@ -248,8 +252,18 @@ class ParticleFilter:
 		self.robot_pose = mean_pose_particle.as_pose()
 
 
+		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
+		# just to get started we will fix the robot's pose to always be at the origin
+		self.robot_pose = Pose()
+
 	def update_particles_with_odom(self, msg):
-		""" Implement a simple version of this (Level 1) or a more complex one (Level 2) """
+		""" Update the particles using the newly given odometry pose.
+			The function computes the value delta which is a tuple (x,y,theta)
+			that indicates the change in position and angle between the odometry
+			when the particles were last updated and the current odometry.
+
+			msg: this is not really needed to implement this, but is here just in case.
+		"""
 		new_odom_xy_theta = TransformHelpers.convert_pose_to_xy_and_theta(self.odom_pose.pose)
 		# compute the change in x,y,theta since our last update
 		if self.current_odom_xy_theta:
@@ -277,7 +291,11 @@ class ParticleFilter:
 		pass
 
 	def resample_particles(self):
-		""" Resample the particles according to the new particle weights """
+		""" Resample the particles according to the new particle weights.
+			The weights stored with each particle should define the probability that a particular
+			particle is selected in the resampling step.  You may want to make use of the given helper
+			function draw_random_sample.
+		"""
 		# make sure the distribution is normalized
 		self.normalize_particles()
 		
@@ -329,13 +347,29 @@ class ParticleFilter:
 
 	@staticmethod
 	def weighted_values(values, probabilities, size):
-		""" Return a random sample of size elements form the set values with the specified probabilities
+		""" Return a random sample of size elements from the set values with the specified probabilities
 			values: the values to sample from (numpy.ndarray)
 			probabilities: the probability of selecting each element in values (numpy.ndarray)
 			size: the number of samples
 		"""
 		bins = np.add.accumulate(probabilities)
 		return values[np.digitize(random_sample(size), bins)]
+
+	@staticmethod
+	def draw_random_sample(choices, probabilities, n):
+		""" Return a random sample of n elements from the set choices with the specified probabilities
+			choices: the values to sample from represented as a list
+			probabilities: the probability of selecting each element in choices represented as a list
+			n: the number of samples
+		"""
+		values = np.array(range(len(choices)))
+		probs = np.array(probabilities)
+		bins = np.add.accumulate(probs)
+		inds = values[np.digitize(random_sample(n), bins)]
+		samples = []
+		for i in inds:
+			samples.append(choices[int(i)])
+		return samples
 
 	def update_initial_pose(self, msg):
 		""" Callback function to handle re-initializing the particle filter based on a pose estimate.
@@ -353,11 +387,14 @@ class ParticleFilter:
 		if xy_theta == None:
 			xy_theta = TransformHelpers.convert_pose_to_xy_and_theta(self.odom_pose.pose)
 		self.particle_cloud = []
+
 		for i in range(self.n_particles):
 			x = normal(xy_theta[0], self._initial_particle_cloud_ordinal_sigma)
 			y = normal(xy_theta[1], self._initial_particle_cloud_ordinal_sigma)
 			theta = normal(xy_theta[2], self._initial_particle_cloud_angular_sigma) # What units are xy_theta in (we assume radians)
 			self.particle_cloud.append(Particle(x, y, theta))
+		#self.particle_cloud.append(Particle(0,0,0))
+		# TODO create particles
 
 		self.normalize_particles()
 		self.update_robot_pose()
@@ -416,8 +453,8 @@ class ParticleFilter:
 			# we have moved far enough to do an update!
 			self.update_particles_with_odom(msg)	# update based on odometry
 			self.update_particles_with_laser(msg)	# update based on laser scan
-			self.resample_particles()				# resample particles to focus on areas of high density
 			self.update_robot_pose()				# update robot's pose
+			self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
 		# publish particles (so things like rviz can see them)
 		self.publish_particles(msg)
