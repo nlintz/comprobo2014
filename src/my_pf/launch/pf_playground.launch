@@ -1,0 +1,8 @@
+<launch>
+	<include file="$(find neato_simulator)/launch/neato_tb_playground.launch"/>
+	<include file="$(find my_pf)/launch/test_my_pf.launch">
+		<arg name="map_file" value="/home/nlintz/catkin_ws/src/neato_robot/neato_2dnav/maps/playground.yaml"/>
+	</include>
+	<include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
+	<node name="teleop" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+</launch>

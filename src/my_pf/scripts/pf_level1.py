@@ -213,7 +213,6 @@ class ParticleFilter:
 		self.particle_cloud = []
 
 		self.current_odom_xy_theta = []
-		print "SET TO [] constructor"
 
 		# request the map from the map server, the map should be of type nav_msgs/OccupancyGrid
 		# TODO: fill in the appropriate service call here.  The resultant map should be assigned be passed
@@ -249,7 +248,6 @@ class ParticleFilter:
 			meanThetaX += math.cos(particle.theta) * particle.w
 			meanThetaY += math.sin(particle.theta) * particle.w
 
-		print meanX, meanY
 		meanTheta = math.atan2(meanThetaY, meanThetaX)
 
 		mean_pose_particle = Particle(meanX, meanY, meanTheta)
@@ -279,11 +277,15 @@ class ParticleFilter:
 		# TODO: modify particles using delta -- DONE
 		# For added difficulty: Implement sample_motion_odometry (Prob Rob p 136)
 		magnitude = math.sqrt(delta[0] ** 2 + delta[1] ** 2)
+		angle = math.atan2(delta[1], delta[0])
+		diff_theta = ParticleFilter.angle_diff(old_odom_xy_theta[2], angle)
+
 		for particle in self.particle_cloud:
-			newTheta = delta[2] + particle.theta
-			particle.x += magnitude * math.cos(newTheta)
-			particle.y += magnitude * math.sin(newTheta)
-			# particle.y += delta[1]
+			# newTheta = delta[2] + particle.theta
+			# particle.x += magnitude * math.cos(newTheta)
+			# particle.y += magnitude * math.sin(newTheta)
+			particle.x += magnitude * math.cos(particle.theta+diff_theta)
+			particle.y += magnitude * math.sin(particle.theta+diff_theta)
 			particle.theta += delta[2]
 
 	def map_calc_range(self,x,y,theta):
@@ -303,7 +305,6 @@ class ParticleFilter:
 		# TODO: fill out the rest of the implementation -- DONE
 		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
-		# print self.n_particles, weights
 		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
 		self.particle_cloud = map(lambda x: self.particle_cloud[x], new_particle_indices)
 
@@ -317,7 +318,6 @@ class ParticleFilter:
 			closest_object = self.occupancy_field.get_closest_obstacle_distance(particle.x, particle.y)
 			if closest_object != float("nan"):
 				#right now we are reassigning the weight completely.  Concider writing this such that we factor in the old weight.
-				# print closest_object
 				particle.w = normal.pdf(closest_object[0])
 		
 
@@ -393,7 +393,6 @@ class ParticleFilter:
 			x = normal(xy_theta[0], self._initial_particle_cloud_ordinal_sigma)
 			y = normal(xy_theta[1], self._initial_particle_cloud_ordinal_sigma)
 			theta = normal(xy_theta[2], self._initial_particle_cloud_angular_sigma) # What units are xy_theta in (we assume radians)
-			# theta = 0.0
 			self.particle_cloud.append(Particle(x, y, theta))
 		#self.particle_cloud.append(Particle(0,0,0))
 		# TODO create particles
@@ -475,7 +474,7 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter(2)
+	n = ParticleFilter(300)
 	r = rospy.Rate(5)
 	running = False
 	while not(rospy.is_shutdown()):
