@@ -249,6 +249,7 @@ class ParticleFilter:
 			meanThetaX += math.cos(particle.theta) * particle.w
 			meanThetaY += math.sin(particle.theta) * particle.w
 
+		print meanX, meanY
 		meanTheta = math.atan2(meanThetaY, meanThetaX)
 
 		mean_pose_particle = Particle(meanX, meanY, meanTheta)
@@ -474,7 +475,7 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter(10)
+	n = ParticleFilter(2)
 	r = rospy.Rate(5)
 	running = False
 	while not(rospy.is_shutdown()):
