@@ -175,7 +175,7 @@ class ParticleFilter:
 								   The pose is expressed as a list [x,y,theta] (where theta is the yaw)
 			map: the map we will be localizing ourselves in.  The map should be of type nav_msgs/OccupancyGrid
 	"""
-	def __init__(self):
+	def __init__(self, n_particles=300):
 		self.initialized = False		# make sure we don't perform updates before everything is setup
 		rospy.init_node('pf')			# tell roscore that we are creating a new node named "pf"
 
@@ -184,7 +184,7 @@ class ParticleFilter:
 		self.odom_frame = "odom"		# the name of the odometry coordinate frame
 		self.scan_topic = "scan"		# the topic where we will get laser scans from 
 
-		self.n_particles = 300			# the number of particles to use
+		self.n_particles = n_particles			# the number of particles to use
 
 		self.d_thresh = 0.2				# the amount of linear movement before performing an update
 		self.a_thresh = math.pi/6		# the amount of angular movement before performing an update
@@ -204,7 +204,7 @@ class ParticleFilter:
 		self.particle_pub = rospy.Publisher("particlecloud", PoseArray)
 
 		# laser_subscriber listens for data from the lidar
-		self.laser_subscriber = rospy.Subscriber(self.scan_topic, LaserScan, self.scan_received)
+		self.laser_subscriber = rospy.Subscriber(self.scan_topic, LaserScan, self.scan_received, queue_size=1)
 
 		# enable listening for and broadcasting coordinate transforms
 		self.tf_listener = TransformListener()
@@ -213,6 +213,7 @@ class ParticleFilter:
 		self.particle_cloud = []
 
 		self.current_odom_xy_theta = []
+		print "SET TO [] constructor"
 
 		# request the map from the map server, the map should be of type nav_msgs/OccupancyGrid
 		# TODO: fill in the appropriate service call here.  The resultant map should be assigned be passed
@@ -224,7 +225,7 @@ class ParticleFilter:
 			map = resp.map
 		except rospy.ServiceException, e:
 			print "Service called failed %s" % e
-		self.occupancy_field = OccupancyField(map)
+		# self.occupancy_field = OccupancyField(map)
 		#		into the init method for OccupancyField
 
 		# for now we have commented out the occupancy field initialization until you can successfully fetch the map
@@ -241,20 +242,20 @@ class ParticleFilter:
 		# NOTE - CHECK IF THIS IS VALID INTERPRETATION OF MEAN POSE
 		# first make sure that the particle weights are normalized
 		self.normalize_particles()
-		meanX, meanY, meanTheta = 0, 0, 0
+		meanX, meanY, meanThetaX, meanThetaY = 0, 0, 0, 0
 		for particle in self.particle_cloud:
 			meanX += particle.x * particle.w
 			meanY += particle.y * particle.w
-			meanTheta += particle.theta * particle.w
-		meanX, meanY, meanTheta = meanX / float(self.n_particles), meanY / float(self.n_particles), meanTheta / float(self.n_particles)
+			meanThetaX += math.cos(particle.theta) * particle.w
+			meanThetaY += math.sin(particle.theta) * particle.w
+
+		meanTheta = math.atan2(meanThetaY, meanThetaX)
 
 		mean_pose_particle = Particle(meanX, meanY, meanTheta)
 		self.robot_pose = mean_pose_particle.as_pose()
 
-
 		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
 		# just to get started we will fix the robot's pose to always be at the origin
-		self.robot_pose = Pose()
 
 	def update_particles_with_odom(self, msg):
 		""" Update the particles using the newly given odometry pose.
@@ -278,7 +279,6 @@ class ParticleFilter:
 		# For added difficulty: Implement sample_motion_odometry (Prob Rob p 136)
 		magnitude = math.sqrt(delta[0] ** 2 + delta[1] ** 2)
 		for particle in self.particle_cloud:
-			# particle.x += delta[0]
 			newTheta = delta[2] + particle.theta
 			particle.x += magnitude * math.cos(newTheta)
 			particle.y += magnitude * math.sin(newTheta)
@@ -392,6 +392,7 @@ class ParticleFilter:
 			x = normal(xy_theta[0], self._initial_particle_cloud_ordinal_sigma)
 			y = normal(xy_theta[1], self._initial_particle_cloud_ordinal_sigma)
 			theta = normal(xy_theta[2], self._initial_particle_cloud_angular_sigma) # What units are xy_theta in (we assume radians)
+			# theta = 0.0
 			self.particle_cloud.append(Particle(x, y, theta))
 		#self.particle_cloud.append(Particle(0,0,0))
 		# TODO create particles
@@ -439,7 +440,6 @@ class ParticleFilter:
 		self.odom_pose = self.tf_listener.transformPose(self.odom_frame, p)
 		# store the the odometry pose in a more convenient format (x,y,theta)
 		new_odom_xy_theta = TransformHelpers.convert_pose_to_xy_and_theta(self.odom_pose.pose)
-
 		if not(self.particle_cloud):
 			# now that we have all of the necessary transforms we can update the particle cloud
 			self.initialize_particle_cloud()
@@ -452,9 +452,9 @@ class ParticleFilter:
 			  math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh):
 			# we have moved far enough to do an update!
 			self.update_particles_with_odom(msg)	# update based on odometry
-			self.update_particles_with_laser(msg)	# update based on laser scan
+			# self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
-			self.resample_particles()				# resample particles to focus on areas of high density
+			# self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
 		# publish particles (so things like rviz can see them)
 		self.publish_particles(msg)
@@ -474,10 +474,13 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter()
+	n = ParticleFilter(10)
 	r = rospy.Rate(5)
+	running = False
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
 		n.broadcast_last_transform()
-		print "Running"
+		if not running:
+			running = True
+			print "Running"
 		r.sleep()
