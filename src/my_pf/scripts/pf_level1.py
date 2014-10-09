@@ -203,7 +203,7 @@ class ParticleFilter:
 		# TODO: define additional constants if needed
 		self._initial_particle_cloud_ordinal_sigma = 2.0 / 10.0
 		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
-		self._distance_likelihood_sigma = 3
+		self._distance_likelihood_sigma = 3.0
 
 		# Setup pubs and subs
 
@@ -306,7 +306,7 @@ class ParticleFilter:
 		"""
 		# make sure the distribution is normalized
 		self.normalize_particles()
-		
+
 		# TODO: fill out the rest of the implementation -- DONE
 		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
@@ -316,7 +316,7 @@ class ParticleFilter:
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
 		# TODO: implement this -- DONE
-		print "Particle Weights Before:", [particle.w for particle in self.particle_cloud]
+		# print "Particle Weights Before:", [particle.w for particle in self.particle_cloud]
 		normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
 		for particle in self.particle_cloud:
@@ -326,10 +326,9 @@ class ParticleFilter:
 				newY = particle.y + magnitude * math.sin(theta)
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
-					# print "type:", type(particle.w)
-					particle.w *= normal.pdf(distance_to_closest_object)
-					# print "type:", type(particle.w)
-		print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
+					particle.w += (normal.pdf(distance_to_closest_object))**3
+			particle.w /= 360.0
+		# print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
 		self.normalize_particles()
 
 	@staticmethod
@@ -417,6 +416,7 @@ class ParticleFilter:
 		totalWeight = sum(map(lambda x: x.w, self.particle_cloud))
 		for particle in self.particle_cloud:
 			particle.w = particle.w / totalWeight
+
 
 	def publish_particles(self, msg):
 		particles_conv = []
