@@ -24,6 +24,8 @@ from numpy.random import choice
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import norm
 
+from generateImageFromLidar import _distanceToImage
+
 class TransformHelpers:
 	""" Some convenience functions for translating between various representions of a robot pose.
 		TODO: nothing... you should not have to modify these """
@@ -140,8 +142,7 @@ class OccupancyField:
 		for i in range(self.map.info.width):
 			for j in range(self.map.info.height):
 				ind = i + j*self.map.info.width
-				self.closest_occ[ind] = distances[curr]*self.map.info.resolution
-				#self.closest_occ[ind] = distances[curr][0]*self.map.info.resolution
+				self.closest_occ[ind] = distances[curr][0]*self.map.info.resolution
 				curr += 1
 
 	def get_closest_obstacle_distance(self,x,y):
@@ -200,9 +201,9 @@ class ParticleFilter:
 		self.laser_max_distance = 2.0	# maximum penalty to assess in the likelihood field model
 
 		# TODO: define additional constants if needed
-		self._initial_particle_cloud_ordinal_sigma = 2.0
+		self._initial_particle_cloud_ordinal_sigma = 2.0 / 10.0
 		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
-		self._distance_likelihood_sigma = 0.5
+		self._distance_likelihood_sigma = 3
 
 		# Setup pubs and subs
 
@@ -325,7 +326,9 @@ class ParticleFilter:
 				newY = particle.y + magnitude * math.sin(theta)
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
+					# print "type:", type(particle.w)
 					particle.w *= normal.pdf(distance_to_closest_object)
+					# print "type:", type(particle.w)
 		print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
 		self.normalize_particles()
 
@@ -459,10 +462,11 @@ class ParticleFilter:
 			  math.fabs(new_odom_xy_theta[1] - self.current_odom_xy_theta[1]) > self.d_thresh or
 			  math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh):
 			# we have moved far enough to do an update!
+			# _distanceToImage((500, 500), msg.ranges)
 			self.update_particles_with_odom(msg)	# update based on odometry
 			self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
-			# self.resample_particles()				# resample particles to focus on areas of high density
+			self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
 		# publish particles (so things like rviz can see them)
 		self.publish_particles(msg)
@@ -482,7 +486,7 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter(1)
+	n = ParticleFilter(50)
 	r = rospy.Rate(5)
 	running = False
 	while not(rospy.is_shutdown()):
