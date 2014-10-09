@@ -84,7 +84,6 @@ class Particle(object):
 
 	@w.setter
 	def w(self, w):
-		print "W set:", self._w
 		self._w = w
 
 	def as_pose(self):
@@ -316,6 +315,7 @@ class ParticleFilter:
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
 		# TODO: implement this -- DONE
+		print "Particle Weights Before:", [particle.w for particle in self.particle_cloud]
 		normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
 		for particle in self.particle_cloud:
@@ -326,8 +326,8 @@ class ParticleFilter:
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
 					particle.w *= normal.pdf(distance_to_closest_object)
+		print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
 		self.normalize_particles()
-		print [particle.w for particle in self.particle_cloud]
 
 	@staticmethod
 	def angle_normalize(z):
@@ -490,5 +490,4 @@ if __name__ == '__main__':
 		n.broadcast_last_transform()
 		if not running:
 			running = True
-			print "Running"
 		r.sleep()
