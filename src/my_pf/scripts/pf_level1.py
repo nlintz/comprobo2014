@@ -58,7 +58,7 @@ class TransformHelpers:
 		angles = euler_from_quaternion(orientation_tuple)
 		return (pose.position.x, pose.position.y, angles[2])
 
-class Particle:
+class Particle(object):
 	""" Represents a hypothesis (particle) of the robot's pose consisting of x,y and theta (yaw)
 		Attributes:
 			x: the x-coordinate of the hypothesis relative to the map frame
@@ -73,10 +73,19 @@ class Particle:
 			y: the y-coordinate of the hypothesis relative ot the map frame
 			theta: the yaw of the hypothesis relative to the map frame
 			w: the particle weight (the class does not ensure that particle weights are normalized """ 
-		self.w = w
+		self._w = w
 		self.theta = theta
 		self.x = x
 		self.y = y
+
+	@property 
+	def w(self):
+		return self._w
+
+	@w.setter
+	def w(self, w):
+		print "W set:", self._w
+		self._w = w
 
 	def as_pose(self):
 		""" A helper function to convert a particle to a geometry_msgs/Pose message """
@@ -204,7 +213,7 @@ class ParticleFilter:
 		self.particle_pub = rospy.Publisher("particlecloud", PoseArray)
 
 		# laser_subscriber listens for data from the lidar
-		self.laser_subscriber = rospy.Subscriber(self.scan_topic, LaserScan, self.scan_received, queue_size=1)
+		self.laser_subscriber = rospy.Subscriber(self.scan_topic, LaserScan, self.scan_received, queue_size=10)
 
 		# enable listening for and broadcasting coordinate transforms
 		self.tf_listener = TransformListener()
@@ -224,11 +233,7 @@ class ParticleFilter:
 			map = resp.map
 		except rospy.ServiceException, e:
 			print "Service called failed %s" % e
-		# self.occupancy_field = OccupancyField(map)
-		#		into the init method for OccupancyField
-
-		# for now we have commented out the occupancy field initialization until you can successfully fetch the map
-		#self.occupancy_field = OccupancyField(map)
+		self.occupancy_field = OccupancyField(map)
 		self.initialized = True
 
 	def update_robot_pose(self):
@@ -311,15 +316,18 @@ class ParticleFilter:
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
 		# TODO: implement this -- DONE
+		normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
-		min_laser_scan = min(laser_data)
-		normal = norm(min_laser_scan, self._distance_likelihood_sigma)
 		for particle in self.particle_cloud:
-			closest_object = self.occupancy_field.get_closest_obstacle_distance(particle.x, particle.y)
-			if closest_object != float("nan"):
-				#right now we are reassigning the weight completely.  Concider writing this such that we factor in the old weight.
-				particle.w = normal.pdf(closest_object[0])
-		
+			for angle, magnitude in enumerate(laser_data):
+				theta = particle.theta + math.pi/2.0 + math.radians(angle)
+				newX = particle.x + magnitude * math.cos(theta)
+				newY = particle.y + magnitude * math.sin(theta)
+				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
+				if not math.isnan(distance_to_closest_object):
+					particle.w *= normal.pdf(distance_to_closest_object)
+		self.normalize_particles()
+		print [particle.w for particle in self.particle_cloud]
 
 	@staticmethod
 	def angle_normalize(z):
@@ -452,7 +460,7 @@ class ParticleFilter:
 			  math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh):
 			# we have moved far enough to do an update!
 			self.update_particles_with_odom(msg)	# update based on odometry
-			# self.update_particles_with_laser(msg)	# update based on laser scan
+			self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
 			# self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
@@ -474,7 +482,7 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter(300)
+	n = ParticleFilter(1)
 	r = rospy.Rate(5)
 	running = False
 	while not(rospy.is_shutdown()):

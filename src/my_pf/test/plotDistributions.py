@@ -10,10 +10,10 @@ def plotGaussian(mean, sigma, x):
 
 def main():
 	if len(sys.argv) == 5:
-		mean = int(sys.argv[1])
-		sigma = int(sys.argv[2])
-		xmin = int(sys.argv[3])
-		xmax = int(sys.argv[4])
+		mean = float(sys.argv[1])
+		sigma = float(sys.argv[2])
+		xmin = float(sys.argv[3])
+		xmax = float(sys.argv[4])
 	else:
 		mean = 0
 		sigma = 1
