@@ -24,8 +24,6 @@ from numpy.random import choice
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import norm
 
-from generateImageFromLidar import _distanceToImage
-
 class TransformHelpers:
 	""" Some convenience functions for translating between various representions of a robot pose.
 		TODO: nothing... you should not have to modify these """
@@ -462,7 +460,7 @@ class ParticleFilter:
 			  math.fabs(new_odom_xy_theta[1] - self.current_odom_xy_theta[1]) > self.d_thresh or
 			  math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh):
 			# we have moved far enough to do an update!
-			# _distanceToImage((500, 500), msg.ranges)
+
 			self.update_particles_with_odom(msg)	# update based on odometry
 			self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
@@ -488,10 +486,7 @@ class ParticleFilter:
 if __name__ == '__main__':
 	n = ParticleFilter(50)
 	r = rospy.Rate(5)
-	running = False
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
 		n.broadcast_last_transform()
-		if not running:
-			running = True
 		r.sleep()
