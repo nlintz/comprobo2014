@@ -200,10 +200,13 @@ class ParticleFilter:
 		self.laser_max_distance = 2.0	# maximum penalty to assess in the likelihood field model
 
 		# TODO: define additional constants if needed
-		self._initial_particle_cloud_ordinal_sigma = 2.0 / 10.0
+		self._initial_particle_cloud_ordinal_sigma = 0.2
 		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
 		self._distance_likelihood_sigma = 3.0
-		self._distance_likelihood_normal_distribution = norm(0.0, self._distance_likelihood_sigma)
+		self._odom_noise_ordinal_sigma = 0.02
+		self._odom_noise_angular_sigma = math.pi / 90.0
+
+		# self._distance_likelihood_normal_distribution = norm(0.0, self._distance_likelihood_sigma)
 
 		# Setup pubs and subs
 
@@ -261,6 +264,7 @@ class ParticleFilter:
 		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
 		# just to get started we will fix the robot's pose to always be at the origin
 
+
 	def update_particles_with_odom(self, msg):
 		""" Update the particles using the newly given odometry pose.
 			The function computes the value delta which is a tuple (x,y,theta)
@@ -289,9 +293,11 @@ class ParticleFilter:
 			# newTheta = delta[2] + particle.theta
 			# particle.x += magnitude * math.cos(newTheta)
 			# particle.y += magnitude * math.sin(newTheta)
-			particle.x += magnitude * math.cos(particle.theta+diff_theta)
-			particle.y += magnitude * math.sin(particle.theta+diff_theta)
-			particle.theta += delta[2]
+			dx = magnitude * math.cos(particle.theta+diff_theta)
+			dy = magnitude * math.sin(particle.theta+diff_theta)
+			particle.x += normal(dx, self._odom_noise_ordinal_sigma)
+			particle.y += normal(dy, self._odom_noise_ordinal_sigma)
+			particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -320,6 +326,8 @@ class ParticleFilter:
 		# normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
 		for particle in self.particle_cloud:
+			newW = 0.0
+
 			for angle, magnitude in enumerate(laser_data):
 				# theta = particle.theta + math.pi/2.0 + math.radians(angle)
 				# newX = particle.x + magnitude * math.cos(theta)
@@ -329,8 +337,11 @@ class ParticleFilter:
 				newY = particle.y + (math.sin(theta) * magnitude)
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
-					particle.w += (self._distance_likelihood_normal_distribution.pdf(distance_to_closest_object))**3
-			particle.w /= 360.0
+					# particle.w += (self._distance_likelihood_normal_distribution.pdf(distance_to_closest_object))**3
+					newW += (ParticleFilter.normal_pdf(distance_to_closest_object, 0.0, self._distance_likelihood_sigma)**3)
+			# TODO - is this math reasonable
+			newW /= 360.0
+			particle.w += newW
 		# print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
 		self.normalize_particles()
 
@@ -384,6 +395,16 @@ class ParticleFilter:
 		for i in inds:
 			samples.append(choices[int(i)])
 		return samples
+
+	@staticmethod
+	def normal_pdf(value, mean, sigma):
+		""" Evaluates the likelihood for a normal pdf for a value
+
+			value: value to evaluate pdf at
+			mean: mean of the normal distribution
+			sigma: standard deviation of the normal distribution
+		"""
+		return (1.0 / (sigma * (2.0 * math.pi)**.5))*math.exp(-1.0*(value - mean)**2 / (2 * sigma ** 2))
 
 	def update_initial_pose(self, msg):
 		""" Callback function to handle re-initializing the particle filter based on a pose estimate.
@@ -489,7 +510,7 @@ class ParticleFilter:
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
 if __name__ == '__main__':
-	n = ParticleFilter(50)
+	n = ParticleFilter(300)
 	r = rospy.Rate(5)
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
