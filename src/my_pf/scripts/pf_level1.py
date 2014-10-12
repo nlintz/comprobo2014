@@ -16,6 +16,7 @@ from random import gauss
 import math
 import time
 import random
+import copy
 
 import numpy as np
 from numpy.random import random_sample
@@ -202,6 +203,7 @@ class ParticleFilter:
 		self._initial_particle_cloud_ordinal_sigma = 2.0 / 10.0
 		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
 		self._distance_likelihood_sigma = 3.0
+		self._distance_likelihood_normal_distribution = norm(0.0, self._distance_likelihood_sigma)
 
 		# Setup pubs and subs
 
@@ -309,22 +311,25 @@ class ParticleFilter:
 		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
 		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
-		self.particle_cloud = map(lambda x: self.particle_cloud[x], new_particle_indices)
+		self.particle_cloud = map(lambda x: copy.deepcopy(self.particle_cloud[x]), new_particle_indices)
 
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
 		# TODO: implement this -- DONE
 		# print "Particle Weights Before:", [particle.w for particle in self.particle_cloud]
-		normal = norm(0.0, self._distance_likelihood_sigma)
+		# normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
 		for particle in self.particle_cloud:
 			for angle, magnitude in enumerate(laser_data):
-				theta = particle.theta + math.pi/2.0 + math.radians(angle)
-				newX = particle.x + magnitude * math.cos(theta)
-				newY = particle.y + magnitude * math.sin(theta)
+				# theta = particle.theta + math.pi/2.0 + math.radians(angle)
+				# newX = particle.x + magnitude * math.cos(theta)
+				# newY = particle.y + magnitude * math.sin(theta)
+				theta = particle.theta + (math.pi / 2.0) + math.radians(angle)
+				newX = particle.x + (math.cos(theta) * magnitude)
+				newY = particle.y + (math.sin(theta) * magnitude)
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
-					particle.w += (normal.pdf(distance_to_closest_object))**3
+					particle.w += (self._distance_likelihood_normal_distribution.pdf(distance_to_closest_object))**3
 			particle.w /= 360.0
 		# print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
 		self.normalize_particles()
