@@ -196,11 +196,12 @@ class ParticleFilter:
 
 		self.d_thresh = 0.2				# the amount of linear movement before performing an update
 		self.a_thresh = math.pi/6		# the amount of angular movement before performing an update
+		self.robot_pose = None
 
 		self.laser_max_distance = 2.0	# maximum penalty to assess in the likelihood field model
 
 		# TODO: define additional constants if needed
-		self._initial_particle_cloud_ordinal_sigma = 0.2
+		self._initial_particle_cloud_ordinal_sigma = 0.4
 		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
 		self._distance_likelihood_sigma = 3.0
 		self._odom_noise_ordinal_sigma = 0.02
@@ -214,6 +215,8 @@ class ParticleFilter:
 		self.pose_listener = rospy.Subscriber("initialpose", PoseWithCovarianceStamped, self.update_initial_pose)
 		# publish the current particle cloud.  This enables viewing particles in rviz.
 		self.particle_pub = rospy.Publisher("particlecloud", PoseArray)
+		# publish the robots pose
+		self.pose_publisher = rospy.Publisher('pose_estimate', Pose, queue_size=10)
 
 		# laser_subscriber listens for data from the lidar
 		self.laser_subscriber = rospy.Subscriber(self.scan_topic, LaserScan, self.scan_received, queue_size=10)
@@ -260,7 +263,7 @@ class ParticleFilter:
 
 		mean_pose_particle = Particle(meanX, meanY, meanTheta)
 		self.robot_pose = mean_pose_particle.as_pose()
-
+		self.broadcast_pose()
 		# TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
 		# just to get started we will fix the robot's pose to always be at the origin
 
@@ -295,9 +298,9 @@ class ParticleFilter:
 			# particle.y += magnitude * math.sin(newTheta)
 			dx = magnitude * math.cos(particle.theta+diff_theta)
 			dy = magnitude * math.sin(particle.theta+diff_theta)
-			particle.x += normal(dx, self._odom_noise_ordinal_sigma)
-			particle.y += normal(dy, self._odom_noise_ordinal_sigma)
-			particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
+			particle.x += normal(dx, self._odom_noise_ordinal_sigma * (1.0/(300.0 * particle.w)))
+			particle.y += normal(dy, self._odom_noise_ordinal_sigma * (1.0/(300.0 * particle.w)))
+			particle.theta += normal(delta[2], self._odom_noise_angular_sigma * (1.0/(300.0 * particle.w)))
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -314,35 +317,33 @@ class ParticleFilter:
 		self.normalize_particles()
 
 		# TODO: fill out the rest of the implementation -- DONE
-		# NOTE: Add In Gaussian Noise
 		weights = map(lambda x: x.w, self.particle_cloud)
 		new_particle_indices = choice(self.n_particles, self.n_particles, p=weights, replace=True) # Choose indices for the new samples based on their weights
 		self.particle_cloud = map(lambda x: copy.deepcopy(self.particle_cloud[x]), new_particle_indices)
 
+		# make sure the distribution is normalized after resampling
+		self.normalize_particles()
+
 	def update_particles_with_laser(self, msg):
 		""" Updates the particle weights in response to the scan contained in the msg """
 		# TODO: implement this -- DONE
-		# print "Particle Weights Before:", [particle.w for particle in self.particle_cloud]
-		# normal = norm(0.0, self._distance_likelihood_sigma)
 		laser_data = msg.ranges
+		# weightRatios = []
 		for particle in self.particle_cloud:
 			newW = 0.0
 
 			for angle, magnitude in enumerate(laser_data):
-				# theta = particle.theta + math.pi/2.0 + math.radians(angle)
-				# newX = particle.x + magnitude * math.cos(theta)
-				# newY = particle.y + magnitude * math.sin(theta)
 				theta = particle.theta + (math.pi / 2.0) + math.radians(angle)
 				newX = particle.x + (math.cos(theta) * magnitude)
 				newY = particle.y + (math.sin(theta) * magnitude)
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
-					# particle.w += (self._distance_likelihood_normal_distribution.pdf(distance_to_closest_object))**3
 					newW += (ParticleFilter.normal_pdf(distance_to_closest_object, 0.0, self._distance_likelihood_sigma)**3)
-			# TODO - is this math reasonable
+			# TODO - is this math reasonable?
 			newW /= 360.0
-			particle.w += newW
-		# print "Particle Weights After:", [particle.w for particle in self.particle_cloud]
+			# weightRatios.append(particle.w / newW) 
+			particle.w *= newW
+		# print sorted(weightRatios)
 		self.normalize_particles()
 
 	@staticmethod
@@ -509,10 +510,15 @@ class ParticleFilter:
 			return
 		self.tf_broadcaster.sendTransform(self.translation, self.rotation, rospy.get_rostime(), self.odom_frame, self.map_frame)
 
+	def broadcast_pose(self):
+		if (self.robot_pose != None):
+			self.pose_publisher.publish(self.robot_pose)
+
 if __name__ == '__main__':
 	n = ParticleFilter(300)
 	r = rospy.Rate(5)
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
 		n.broadcast_last_transform()
+		# n.broadcast_pose()
 		r.sleep()

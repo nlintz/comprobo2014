@@ -21,15 +21,6 @@ def distanceToImage(resolution, distances, pointSize=3):
 	heading = 0.0
 
 	for i, distance in enumerate(distances):
-		# theta = math.radians(heading) + math.pi/2.0 + math.radians(i)
-		# theta = math.radians(heading) + math.radians(i) - math.pi / 2.0
-		# newX = centerX + distance * math.cos(theta)
-		# newY = centerY + distance * math.sin(theta)
-		
-		#works
-		#angle = _translate(i, 0.0, 360.0, 2*math.pi, 0.0)
-		#x = _translate(math.sin(angle) * distance, 0, maxDistance, 0, center[0] - 1)
-		#y = _translate(math.cos(angle) * distance, 0, maxDistance, 0, center[1] - 1)
 		particle_offset_angle = 30.0
 		particle_offset_x = 0.0
 		particle_offset_y = 0.0
@@ -40,9 +31,6 @@ def distanceToImage(resolution, distances, pointSize=3):
 		x = _translate(particle_offset_x + math.cos(angle) * distance, 0, maxDistance, 0, center[0] - 1)
 		y = _translate(particle_offset_y + math.sin(angle) * distance, 0, maxDistance, 0, center[1] - 1)
 
-		# angle = _translate(i, 0.0, 360.0, 2*math.pi, 0.0)
-		# x = _translate(newX, 0, maxDistance, 0, center[0] - 1)
-		# y = _translate(newY * distance, 0, maxDistance, 0, center[1] - 1)
 		for j in range(int(-1.0 * pointSize / 2), int(pointSize / 2 + 1)):
 			for k in range(int(-1.0 * pointSize / 2), int(pointSize / 2 + 1)):
 				pointX = center[1] - int(y) + j
