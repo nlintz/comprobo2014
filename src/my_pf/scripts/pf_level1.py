@@ -308,10 +308,10 @@ class ParticleFilter:
 				particle.x += dx
 				particle.y += dy
 			
-			if delta[2] > abs(self._odom_noise_angular_threshold):
-				particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
-			else:
-				particle.theta += delta[2]
+			# if delta[2] > abs(self._odom_noise_angular_threshold):
+			# 	particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
+			# else:
+			particle.theta += delta[2]
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -500,9 +500,9 @@ class ParticleFilter:
 			# we have moved far enough to do an update!
 
 			self.update_particles_with_odom(msg)	# update based on odometry
-			self.update_particles_with_laser(msg)	# update based on laser scan
+			# self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
-			self.resample_particles()				# resample particles to focus on areas of high density
+			# self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
 		# publish particles (so things like rviz can see them)
 		self.publish_particles(msg)
@@ -526,7 +526,7 @@ class ParticleFilter:
 			self.pose_publisher.publish(self.robot_pose)
 
 if __name__ == '__main__':
-	n = ParticleFilter(300)
+	n = ParticleFilter(5)
 	r = rospy.Rate(5)
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform
