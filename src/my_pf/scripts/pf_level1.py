@@ -207,6 +207,9 @@ class ParticleFilter:
 		self._odom_noise_ordinal_sigma = 0.02
 		self._odom_noise_angular_sigma = math.pi / 90.0
 
+		self._odom_noise_ordinal_threshold = 0.02
+		self._odom_noise_angular_threshold = 0.02
+
 		# self._distance_likelihood_normal_distribution = norm(0.0, self._distance_likelihood_sigma)
 
 		# Setup pubs and subs
@@ -291,16 +294,24 @@ class ParticleFilter:
 		magnitude = math.sqrt(delta[0] ** 2 + delta[1] ** 2)
 		angle = math.atan2(delta[1], delta[0])
 		diff_theta = ParticleFilter.angle_diff(old_odom_xy_theta[2], angle)
-
+		print "magnitdue: %f, angle: %f" % (magnitude, delta[2])
 		for particle in self.particle_cloud:
 			# newTheta = delta[2] + particle.theta
 			# particle.x += magnitude * math.cos(newTheta)
 			# particle.y += magnitude * math.sin(newTheta)
 			dx = magnitude * math.cos(particle.theta+diff_theta)
 			dy = magnitude * math.sin(particle.theta+diff_theta)
-			particle.x += normal(dx, self._odom_noise_ordinal_sigma * (1.0/(300.0 * particle.w)))
-			particle.y += normal(dy, self._odom_noise_ordinal_sigma * (1.0/(300.0 * particle.w)))
-			particle.theta += normal(delta[2], self._odom_noise_angular_sigma * (1.0/(300.0 * particle.w)))
+			if (magnitude > self._odom_noise_ordinal_threshold):
+				particle.x += normal(dx, self._odom_noise_ordinal_sigma)
+				particle.y += normal(dy, self._odom_noise_ordinal_sigma)
+			else:
+				particle.x += dx
+				particle.y += dy
+			
+			if delta[2] > abs(self._odom_noise_angular_threshold):
+				particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
+			else:
+				particle.theta += delta[2]
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -339,10 +350,10 @@ class ParticleFilter:
 				distance_to_closest_object = self.occupancy_field.get_closest_obstacle_distance(newX, newY)
 				if not math.isnan(distance_to_closest_object):
 					newW += (ParticleFilter.normal_pdf(distance_to_closest_object, 0.0, self._distance_likelihood_sigma)**3)
-			# TODO - is this math reasonable?
-			newW /= 360.0
-			# weightRatios.append(particle.w / newW) 
-			particle.w *= newW
+				# TODO - is this math reasonable?
+				# newW /= 360.0
+				# weightRatios.append(particle.w / newW) 
+				particle.w = newW
 		# print sorted(weightRatios)
 		self.normalize_particles()
 
