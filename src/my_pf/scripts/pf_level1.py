@@ -201,8 +201,8 @@ class ParticleFilter:
 		self.laser_max_distance = 2.0	# maximum penalty to assess in the likelihood field model
 
 		# TODO: define additional constants if needed
-		self._initial_particle_cloud_ordinal_sigma = 0.4
-		self._initial_particle_cloud_angular_sigma = math.pi / 4.0 # TODO - comment
+		self._initial_particle_cloud_ordinal_sigma = 0.2	
+		self._initial_particle_cloud_angular_sigma = math.pi / 10.0 # TODO - comment
 		self._distance_likelihood_sigma = 3.0
 		self._odom_noise_ordinal_sigma = 0.02
 		self._odom_noise_angular_sigma = math.pi / 90.0
@@ -296,9 +296,6 @@ class ParticleFilter:
 		diff_theta = ParticleFilter.angle_diff(old_odom_xy_theta[2], angle)
 		print "magnitdue: %f, angle: %f" % (magnitude, delta[2])
 		for particle in self.particle_cloud:
-			# newTheta = delta[2] + particle.theta
-			# particle.x += magnitude * math.cos(newTheta)
-			# particle.y += magnitude * math.sin(newTheta)
 			dx = magnitude * math.cos(particle.theta+diff_theta)
 			dy = magnitude * math.sin(particle.theta+diff_theta)
 			if (magnitude > self._odom_noise_ordinal_threshold):
@@ -308,10 +305,10 @@ class ParticleFilter:
 				particle.x += dx
 				particle.y += dy
 			
-			# if delta[2] > abs(self._odom_noise_angular_threshold):
-			# 	particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
-			# else:
-			particle.theta += delta[2]
+			if delta[2] > abs(self._odom_noise_angular_threshold):
+				particle.theta += normal(delta[2], self._odom_noise_angular_sigma)
+			else:
+				particle.theta += delta[2]
 
 	def map_calc_range(self,x,y,theta):
 		""" Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
@@ -500,9 +497,9 @@ class ParticleFilter:
 			# we have moved far enough to do an update!
 
 			self.update_particles_with_odom(msg)	# update based on odometry
-			# self.update_particles_with_laser(msg)	# update based on laser scan
+			self.update_particles_with_laser(msg)	# update based on laser scan
 			self.update_robot_pose()				# update robot's pose
-			# self.resample_particles()				# resample particles to focus on areas of high density
+			self.resample_particles()				# resample particles to focus on areas of high density
 			self.fix_map_to_odom_transform(msg)		# update map to odom transform now that we have new particles
 		# publish particles (so things like rviz can see them)
 		self.publish_particles(msg)
@@ -526,7 +523,7 @@ class ParticleFilter:
 			self.pose_publisher.publish(self.robot_pose)
 
 if __name__ == '__main__':
-	n = ParticleFilter(5)
+	n = ParticleFilter(300)
 	r = rospy.Rate(5)
 	while not(rospy.is_shutdown()):
 		# in the main loop all we do is continuously broadcast the latest map to odom transform

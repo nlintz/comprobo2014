@@ -4,5 +4,5 @@
 		<arg name="map_file" value="/home/nlintz/catkin_ws/src/neato_robot/neato_2dnav/maps/playground_smaller.yaml"/>
 	</include>
 	<include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
-	<node name="teleop" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" />
+	<!-- <node name="teleop" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" /> -->
 </launch>
