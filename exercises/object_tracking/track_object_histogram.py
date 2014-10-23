@@ -23,6 +23,7 @@ class ObjectTracker:
 		hsv_roi =  cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 		# play with the number of histogram bins by changing histSize
 		self.query_hist = cv2.calcHist([hsv_roi],[0],mask=None,histSize=[256],ranges=[0,255])
+		print self.query_hist.shape
 		cv2.normalize(self.query_hist,self.query_hist,0,255,cv2.NORM_MINMAX)
 
 	def track(self,im):

@@ -57,7 +57,7 @@ def mouse_event(event,x,y,flag,dc):
 		drawing = False
 	elif event == cv2.EVENT_MOUSEMOVE and drawing:
 		# draw a line between the last mouse position and the current one
-		cv2.line(im,(int(x/(visualizer_size[1]/patch_size[1])),int(y/(visualizer_size[0]/patch_size[0]))),(int(last_x/(visualizer_size[1]/patch_size[1])),int(last_y/(visualizer_size[0]/patch_size[0]))),0,2)
+		cv2.line(im,(int(x/(visualizer_size[1]/patch_size[1])),int(y/(visualizer_size[0]/patch_size[0]))),(int(last_x/(visualizer_size[1]/patch_size[1])),int(last_y/(visualizer_size[0]/patch_size[0]))),0,5)
 		visualize_descriptor()
 		last_x = x
 		last_y = y
