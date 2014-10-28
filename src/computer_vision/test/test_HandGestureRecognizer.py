@@ -5,4 +5,13 @@ from HandGestureRecognizer import *
 
 def test_subtractBackground():
 	cap = cv2.VideoCapture(0)
-	handGestureRecognizer = HandGestureRecognizer()
+	handGestureRecognizer = HandGestureRecognizer(cap)
+	while(1):
+	    
+	    cv2.imshow('frame',handGestureRecognizer.subtractBackground())
+	    k = cv2.waitKey(30) & 0xff
+	    if k == 27:
+	        break
+
+if __name__ == "__main__":
+	test_subtractBackground()
