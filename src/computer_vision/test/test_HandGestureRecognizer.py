@@ -7,11 +7,16 @@ def test_subtractBackground():
 	cap = cv2.VideoCapture(0)
 	handGestureRecognizer = HandGestureRecognizer(cap)
 	while(1):
-	    
 	    cv2.imshow('frame',handGestureRecognizer.subtractBackground())
 	    k = cv2.waitKey(30) & 0xff
 	    if k == 27:
 	        break
 
+def test_calibrate():
+	cap = cv2.VideoCapture(0)
+	handGestureRecognizer = HandGestureRecognizer(cap)
+	handGestureRecognizer.calibrate()
+
+
 if __name__ == "__main__":
-	test_subtractBackground()
+	test_calibrate()
