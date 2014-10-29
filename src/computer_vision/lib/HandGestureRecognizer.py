@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from PyQt4 import QtGui, QtCore
 import copy
 
 class HandGestureRecognizer(object):
@@ -42,7 +41,7 @@ class HandGestureRecognizer(object):
 	def _getCalibrationColors(self, calibrationImage):
 		calibrationColors = []
 		for point in self._calibrationPoints:
-			calibrationColors.append(calibrationImage[point[1], point[0]][::-1])
+			calibrationColors.append(calibrationImage[point[1], point[0]])
 		return calibrationColors
 
 	def _setCalibrationPoint(self, event, x, y, flag, param):
@@ -55,5 +54,15 @@ class HandGestureRecognizer(object):
 		while True:
 			if cv2.waitKey(20) & 0xFF == 99:
 				break
-			ret, img = self._videoFeed.read()
-			cv2.imshow("Gesture_Tracking", img)
+			_, img = self._videoFeed.read()
+			hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+			maskColor = np.uint8([[ calibrationColors[0] ]])
+			hsvMaskColor = cv2.cvtColor(maskColor,cv2.COLOR_BGR2HSV)
+
+			lowerBound = np.array([hsvMaskColor[0][0][0] - 10, 50, 50])
+			upperBound = np.array([hsvMaskColor[0][0][0] + 10, 250, 250])
+			print lowerBound, upperBound
+
+			mask = cv2.inRange(hsv, lowerBound, upperBound)
+
+			cv2.imshow("Gesture_Tracking", mask)

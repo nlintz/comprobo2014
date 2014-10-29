@@ -17,6 +17,12 @@ def test_calibrate():
 	handGestureRecognizer = HandGestureRecognizer(cap)
 	handGestureRecognizer.calibrate()
 
+def test_track():
+	cap = cv2.VideoCapture(0)
+	handGestureRecognizer = HandGestureRecognizer(cap)
+	handGestureRecognizer._trackHand([[0,255,0]])
+
 
 if __name__ == "__main__":
+	# test_track()
 	test_calibrate()
