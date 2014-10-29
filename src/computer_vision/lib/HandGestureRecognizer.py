@@ -48,21 +48,28 @@ class HandGestureRecognizer(object):
 		if event == cv2.EVENT_LBUTTONDOWN:
 			self._calibrationPoints.append((x, y))
 
+	def _detectHand(self, img, calibrationColors):
+		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+		masks = [HandGestureRecognizer._hsvMaskFromCalibrationColor(calibrationColors[i], hsv, 10) for i in range(len(calibrationColors))]
+		maskSum = reduce(lambda x,y: cv2.add(x,y) ,masks)
+		blurredMaskSum = cv2.medianBlur(maskSum, 9)
+		return blurredMaskSum
+
 	def _trackHand(self, calibrationColors):
 		cv2.namedWindow("Gesture_Tracking")
-
 		while True:
 			if cv2.waitKey(20) & 0xFF == 99:
 				break
 			_, img = self._videoFeed.read()
-			hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-			maskColor = np.uint8([[ calibrationColors[0] ]])
-			hsvMaskColor = cv2.cvtColor(maskColor,cv2.COLOR_BGR2HSV)
+			blurredMaskSum = self._detectHand(img, calibrationColors)
+			cv2.imshow("Gesture_Tracking", blurredMaskSum)
 
-			lowerBound = np.array([hsvMaskColor[0][0][0] - 10, 50, 50])
-			upperBound = np.array([hsvMaskColor[0][0][0] + 10, 250, 250])
-			print lowerBound, upperBound
+	@staticmethod
+	def _hsvMaskFromCalibrationColor(calibrationColor, hsvImage, sensitivity):
+		maskColor = np.uint8([[ calibrationColor ]])
+		hsvMaskColor = cv2.cvtColor(maskColor,cv2.COLOR_BGR2HSV)
 
-			mask = cv2.inRange(hsv, lowerBound, upperBound)
-
-			cv2.imshow("Gesture_Tracking", mask)
+		lowerBound = np.array([hsvMaskColor[0][0][0] - sensitivity, 50, 50])
+		upperBound = np.array([hsvMaskColor[0][0][0] + sensitivity, 250, 250])
+		mask = cv2.inRange(hsvImage, lowerBound, upperBound)
+		return mask
