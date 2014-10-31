@@ -23,6 +23,7 @@ class HandGestureRecognizer(object):
 			if cv2.waitKey(20) & 0xFF == 32:
 				videoPaused = not videoPaused
 			if cv2.waitKey(20) & 0xFF == 97:
+				print 'calibratoin complete'
 				break
 			if videoPaused == False:
 				ret, img = self._videoFeed.read()
@@ -30,6 +31,7 @@ class HandGestureRecognizer(object):
 			for point in self._calibrationPoints:
 				cv2.circle(calibrationImage, point, 5, (255,0,0), -1)
 			cv2.imshow("Calibration_Window", calibrationImage)
+		# TODO - decouple from calibration code
 		self._calibrationComplete(img)
 
 	def _calibrationComplete(self, calibrationImage):
@@ -37,6 +39,23 @@ class HandGestureRecognizer(object):
 
 		# TODO - THIS METHOD SHOULDNT BE ON THE GESTURE RECOGNIZER
 		self._trackHand(calibrationColors)
+
+	def _convexHull(self, img, threshold=100):
+		"""
+		Returns convex hull for a black and white image
+		"""
+		edges = cv2.Canny(copy.deepcopy(img), threshold, threshold*2)
+		convexHullImage = np.zeros(img.shape+(3,), np.uint8)
+
+		contours, _ = cv2.findContours(copy.deepcopy(edges), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		for cnt in contours:
+			hull = cv2.convexHull(cnt)
+			cv2.drawContours(convexHullImage,[cnt],-1,(0,255,0),3)
+			cv2.drawContours(convexHullImage,[hull],-1,(0,0,255),3)
+
+		cv2.imshow('output',convexHullImage)
+
+		return convexHullImage
 
 	def _getCalibrationColors(self, calibrationImage):
 		calibrationColors = []
@@ -62,7 +81,8 @@ class HandGestureRecognizer(object):
 				break
 			_, img = self._videoFeed.read()
 			blurredMaskSum = self._detectHand(img, calibrationColors)
-			cv2.imshow("Gesture_Tracking", blurredMaskSum)
+			convexHull = self._convexHull(blurredMaskSum, 100)
+			cv2.imshow("Gesture_Tracking", convexHull)
 
 	@staticmethod
 	def _hsvMaskFromCalibrationColor(calibrationColor, hsvImage, sensitivity):
