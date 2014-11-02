@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import copy
+import random
 
 class HandGestureRecognizer(object):
 	""" Class for converting video footage to a hand gesture 
@@ -44,29 +45,26 @@ class HandGestureRecognizer(object):
 		"""
 		Returns convex hull for a black and white image
 		"""
+		# TODO, this method should be returning the convex hull and defects points instead of a plot with both
 		edges = cv2.Canny(copy.deepcopy(img), threshold, threshold*2)
 		convexHullImage = np.zeros(img.shape+(3,), np.uint8)
 
 		contours, _ = cv2.findContours(copy.deepcopy(edges), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 		for cnt in contours:
 			hull = cv2.convexHull(cnt)
-			cv2.drawContours(convexHullImage,[cnt],-1,(0,255,0),3)
+			hullIndices = cv2.convexHull(cnt, returnPoints=False)
 			cv2.drawContours(convexHullImage,[hull],-1,(0,0,255),3)
-			try:
-				defects = cv2.convexityDefects(cnt,hull)
-				print "DEFECTS FOUND"
-			except Exception, e:
-				pass
-			
-			# if len(hull) >= 3:
-				# defects = cv2.convexityDefects(cnt,hull)
+			cv2.drawContours(convexHullImage,[cnt],-1,(0,255,0),3)
+			if len(hull)>3 and len(cnt)>3:
+				defects = cv2.convexityDefects(cnt,hullIndices)
+				if defects != None:
+					for i in range(defects.shape[0]):
+						s,e,f,d = defects[i,0]
+						start = tuple(cnt[s][0])
+						end = tuple(cnt[e][0])
+						far = tuple(cnt[f][0])
+						cv2.circle(convexHullImage,far,5,[255,255,255],-1)
 
-				# for i in range(defects.shape[0]):
-				# 	s,e,f,d = defects[i,0]
-				# 	start = tuple(cnt[s][0])
-				# 	end = tuple(cnt[e][0])
-				# 	far = tuple(cnt[f][0])
-				# 	cv2.circle(convexHullImage,far,5,[0,0,255],-1)
 		return convexHullImage
 
 	def _getCalibrationColors(self, calibrationImage):
