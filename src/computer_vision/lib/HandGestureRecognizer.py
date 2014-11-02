@@ -52,9 +52,21 @@ class HandGestureRecognizer(object):
 			hull = cv2.convexHull(cnt)
 			cv2.drawContours(convexHullImage,[cnt],-1,(0,255,0),3)
 			cv2.drawContours(convexHullImage,[hull],-1,(0,0,255),3)
+			try:
+				defects = cv2.convexityDefects(cnt,hull)
+				print "DEFECTS FOUND"
+			except Exception, e:
+				pass
+			
+			# if len(hull) >= 3:
+				# defects = cv2.convexityDefects(cnt,hull)
 
-		cv2.imshow('output',convexHullImage)
-
+				# for i in range(defects.shape[0]):
+				# 	s,e,f,d = defects[i,0]
+				# 	start = tuple(cnt[s][0])
+				# 	end = tuple(cnt[e][0])
+				# 	far = tuple(cnt[f][0])
+				# 	cv2.circle(convexHullImage,far,5,[0,0,255],-1)
 		return convexHullImage
 
 	def _getCalibrationColors(self, calibrationImage):
