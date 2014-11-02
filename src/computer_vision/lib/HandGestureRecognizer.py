@@ -3,6 +3,14 @@ import cv2
 import copy
 import random
 
+class ImageProcessor(object):
+	def __init__(self):
+		pass
+
+class TransformationRenderer(object):
+	def __init__(self):
+		pass
+
 class HandGestureRecognizer(object):
 	""" Class for converting video footage to a hand gesture 
 	"""
@@ -50,6 +58,8 @@ class HandGestureRecognizer(object):
 		convexHullImage = np.zeros(img.shape+(3,), np.uint8)
 
 		contours, _ = cv2.findContours(copy.deepcopy(edges), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		# if contours:
+		# 	contours = [contours[0]]
 		for cnt in contours:
 			hull = cv2.convexHull(cnt)
 			hullIndices = cv2.convexHull(cnt, returnPoints=False)
