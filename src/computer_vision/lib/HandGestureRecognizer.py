@@ -2,14 +2,7 @@ import numpy as np
 import cv2
 import copy
 import random
-
-class ImageProcessor(object):
-	def __init__(self):
-		pass
-
-class TransformationRenderer(object):
-	def __init__(self):
-		pass
+from CalibrationController import CalibrationController
 
 class HandGestureRecognizer(object):
 	""" Class for converting video footage to a hand gesture 
@@ -19,35 +12,16 @@ class HandGestureRecognizer(object):
 		videoCapture: capture object returned from cv2.VideoCapture
 		"""
 		self._videoFeed = videoFeed
-		self._calibrationPoints = []
+		self._calibrationService = CalibrationController(self._videoFeed)
+		self._calibrationColors = None
 
 	def calibrate(self):
 		""" creates a calibration window. User clicks points on their hand 
 		"""
-		cv2.namedWindow("Calibration_Window")
-		cv2.setMouseCallback("Calibration_Window", self._setCalibrationPoint)
-		videoPaused = False
+		self._calibrationColors = self._calibrationService.calibrateColors()
 
-		while True:
-			if cv2.waitKey(20) & 0xFF == 32:
-				videoPaused = not videoPaused
-			if cv2.waitKey(20) & 0xFF == 97:
-				print 'calibratoin complete'
-				break
-			if videoPaused == False:
-				ret, img = self._videoFeed.read()
-				calibrationImage = copy.deepcopy(img)
-			for point in self._calibrationPoints:
-				cv2.circle(calibrationImage, point, 5, (255,0,0), -1)
-			cv2.imshow("Calibration_Window", calibrationImage)
-		# TODO - decouple from calibration code
-		self._calibrationComplete(img)
-
-	def _calibrationComplete(self, calibrationImage):
-		calibrationColors = self._getCalibrationColors(calibrationImage)
-
-		# TODO - THIS METHOD SHOULDNT BE ON THE GESTURE RECOGNIZER
-		self._trackHand(calibrationColors)
+	# 	# TODO - THIS METHOD SHOULDNT BE ON THE GESTURE RECOGNIZER
+	# 	self._trackHand(calibrationColors)
 
 	def _convexHull(self, img, threshold=100):
 		"""
@@ -74,16 +48,6 @@ class HandGestureRecognizer(object):
 						cv2.circle(convexHullImage,far,5,[255,255,255],-1)
 
 		return convexHullImage
-
-	def _getCalibrationColors(self, calibrationImage):
-		calibrationColors = []
-		for point in self._calibrationPoints:
-			calibrationColors.append(calibrationImage[point[1], point[0]])
-		return calibrationColors
-
-	def _setCalibrationPoint(self, event, x, y, flag, param):
-		if event == cv2.EVENT_LBUTTONDOWN:
-			self._calibrationPoints.append((x, y))
 
 	def _detectHand(self, img, calibrationColors):
 		hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)

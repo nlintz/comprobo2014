@@ -34,5 +34,5 @@ def test_drawContour():
 
 if __name__ == "__main__":
 	# test_drawContour()
-	test_track()
-	# test_calibrate()
+	# test_track()
+	print test_calibrate()
