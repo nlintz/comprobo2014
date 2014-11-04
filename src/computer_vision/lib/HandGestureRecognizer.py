@@ -16,7 +16,6 @@ class HandGestureRecognizer(object):
 		self._videoFeed = videoFeed
 		self._calibrationController = CalibrationController(self._videoFeed)
 		self._trackingController = TrackingController(self._videoFeed, [])
-		self._calibrationColors = None
 
 	def calibrate(self):
 		self._trackingController._calibrationColors = self._calibrationController.calibrateColors()
