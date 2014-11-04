@@ -16,7 +16,7 @@ def test_subtractBackground():
 def test_calibrate():
 	cap = cv2.VideoCapture(0)
 	handGestureRecognizer = HandGestureRecognizer(cap)
-	handGestureRecognizer.calibrate()
+	print handGestureRecognizer.calibrate()
 
 def test_track():
 	colors = [[220, 160,  92], [215, 152,  59], [199, 148,  79], [184, 143,  85], [188, 136,  56], [208, 158,  93], [204, 152,  51], [153, 126,  66], [188, 135,  51], [183, 137,  67], [169, 127,  65], [166, 128,  74], [185, 136,  68], [177, 141,  95], [192, 146,  82]]
@@ -34,5 +34,5 @@ def test_drawContour():
 
 if __name__ == "__main__":
 	# test_drawContour()
-	# test_track()
-	print test_calibrate()
+	test_track()
+	# test_calibrate()

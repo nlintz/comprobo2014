@@ -2,10 +2,13 @@ import cv2
 import numpy as np
 import Helpers
 import copy
+import time
+import hashlib
 
 class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
 		self.window = Helpers.Window("TrackingWindow")
+		
 		self.renderer = Helpers.ImageRenderer()
 		self.renderer.addWindow(self.window)
 		self._stopTracking = False
@@ -22,28 +25,26 @@ class TrackingController(object):
 	def _trackingComplete(self):
 		self._stopTracking = True
 
-	def _drawConvexHull(self, contours):
-		convexHulls = TrackingController._contourConvexHulls(contours)
+	def _drawConvexHull(self, contours, convexHulls):
 		for contour in contours:
-			cv2.drawContours(self.window.image, [convexHulls[str(contour)]], -1, (0,0,255), 3)
+			cv2.drawContours(self.window.image, [convexHulls[Helpers.hashable(contour)]], -1, (0,0,255), 3)
 			cv2.drawContours(self.window.image, [contour], -1, (0,255,0), 3)
 			
-	def _drawConvexityDefects(self, contours):
-		convexityDefects = TrackingController._contourConvexityDefects(contours)
+	def _drawConvexityDefects(self, contours, convexityDefects):
 		for contour in contours:
-			contourDefects = convexityDefects.get(str(contour), None)
+			contourDefects = convexityDefects.get(Helpers.hashable(contour), None)
 			if contourDefects is not None:
 				for i in range(contourDefects.shape[0]):
 					s,e,f,d = contourDefects[i,0]
 					defectPoint = tuple(contour[f][0])
-					cv2.circle(self.window.image,defectPoint,5,[255,255,255],-1)
+					cv2.circle(self.window.image,defectPoint,5,[255,0,0],-1)
 
 	@staticmethod
 	def _contourConvexHulls(contours):
 		contourConvexHulls = {}
 		for contour in contours:
 			hull = cv2.convexHull(contour)
-			contourConvexHulls[str(contour)] = hull
+			contourConvexHulls[Helpers.hashable(contour)] = hull
 		return contourConvexHulls
 
 	@staticmethod
@@ -53,7 +54,8 @@ class TrackingController(object):
 			hullIndices = cv2.convexHull(contour, returnPoints=False)
 			if len(hullIndices)>3 and len(contour)>3:
 				defects = cv2.convexityDefects(contour, hullIndices)
-				contourConvexityDefects[str(contour)] = defects
+				contour.flags.writeable = False
+				contourConvexityDefects[Helpers.hashable(contour)] = defects
 				# pass
 		return contourConvexityDefects
 
@@ -80,14 +82,12 @@ class TrackingController(object):
 		while not self._stopTracking:
 			ret, image = self._videoFeed.read()
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
-
 			filteredImage = cv2.cvtColor(TrackingController._filterHandFromImage(image, self._calibrationColors), cv2.COLOR_GRAY2BGR)
-
-			self.window.updateImage(filteredImage)
-
 			contours = self._contours(filteredImage)
-			self._drawConvexHull(contours)
-			self._drawConvexityDefects(contours)
+			convexityDefects = TrackingController._contourConvexityDefects(contours)
+			convexHulls = TrackingController._contourConvexHulls(contours)
+			self._drawConvexityDefects(contours, convexityDefects)
+			self._drawConvexHull(contours, convexHulls)
 			self.renderer.showWindows()
 
 	@staticmethod
@@ -99,3 +99,8 @@ class TrackingController(object):
 		upperBound = np.array([hsvMaskColor[0][0][0] + sensitivity, 250, 250])
 		mask = cv2.inRange(hsvImage, lowerBound, upperBound)
 		return mask
+
+# colors = [[220, 160,  92], [215, 152,  59], [199, 148,  79], [184, 143,  85], [188, 136,  56], [208, 158,  93], [204, 152,  51], [153, 126,  66], [188, 135,  51], [183, 137,  67], [169, 127,  65], [166, 128,  74], [185, 136,  68], [177, 141,  95], [192, 146,  82]]
+# cap = cv2.VideoCapture(0)
+# T = TrackingController(cap, colors)
+# T._trackHand()
