@@ -8,9 +8,12 @@ import hashlib
 class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
 		self.window = Helpers.Window("TrackingWindow")
-		
+		# self.filteredImageWindow = Helpers.Window("FilteredImage")
+
 		self.renderer = Helpers.ImageRenderer()
 		self.renderer.addWindow(self.window)
+		# self.renderer.addWindow(self.filteredImageWindow)
+
 		self._stopTracking = False
 		self._videoFeed = videoFeed
 		if calibrationColors == None:
@@ -19,11 +22,18 @@ class TrackingController(object):
 
 		trackingComplete = Helpers.KeyboardEvent()
 		trackingComplete.registerKeyPressed('c', self._trackingComplete)
-
 		self.window.registerEvent(trackingComplete)
+
+		# saveFilteredImage = Helpers.KeyboardEvent()
+		# trackingComplete.registerKeyPressed('s', self._saveFilteredImage)
+		# self.filteredImageWindow.registerEvent(saveFilteredImage)
+
 
 	def _trackingComplete(self):
 		self._stopTracking = True
+
+	def _saveFilteredImage(self):
+		print "Saving Filtered Image"
 
 	def _drawConvexHull(self, contours, convexHulls):
 		for contour in contours:
@@ -38,6 +48,9 @@ class TrackingController(object):
 					s,e,f,d = contourDefects[i,0]
 					defectPoint = tuple(contour[f][0])
 					cv2.circle(self.window.image,defectPoint,5,[255,0,0],-1)
+
+	def _drawFilteredImage(self, filteredImage):
+		self.filteredImageWindow.updateImage(filteredImage)
 
 	@staticmethod
 	def _contourConvexHulls(contours):
@@ -78,17 +91,22 @@ class TrackingController(object):
 		blurredMaskSum = cv2.medianBlur(maskSum, 9)
 		return blurredMaskSum
 
-	def _trackHand(self):
-		while not self._stopTracking:
+	def _trackHand(self, shouldRender=True):
+		if not self._stopTracking:
 			ret, image = self._videoFeed.read()
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
+			self.filteredImageWindow.updateImage(np.zeros(image.shape, np.uint8))
+
 			filteredImage = cv2.cvtColor(TrackingController._filterHandFromImage(image, self._calibrationColors), cv2.COLOR_GRAY2BGR)
 			contours = self._contours(filteredImage)
 			convexityDefects = TrackingController._contourConvexityDefects(contours)
 			convexHulls = TrackingController._contourConvexHulls(contours)
-			self._drawConvexityDefects(contours, convexityDefects)
-			self._drawConvexHull(contours, convexHulls)
-			self.renderer.showWindows()
+			print 'here'
+			if shouldRender:
+				# self._drawFilteredImage()
+				self._drawConvexityDefects(contours, convexityDefects)
+				self._drawConvexHull(contours, convexHulls)
+				self.renderer.showWindows()
 
 	@staticmethod
 	def _hsvMaskFromCalibrationColor(calibrationColor, hsvImage, sensitivity):
@@ -103,4 +121,5 @@ class TrackingController(object):
 # colors = [[220, 160,  92], [215, 152,  59], [199, 148,  79], [184, 143,  85], [188, 136,  56], [208, 158,  93], [204, 152,  51], [153, 126,  66], [188, 135,  51], [183, 137,  67], [169, 127,  65], [166, 128,  74], [185, 136,  68], [177, 141,  95], [192, 146,  82]]
 # cap = cv2.VideoCapture(0)
 # T = TrackingController(cap, colors)
-# T._trackHand()
+# while 1:
+# 	T._trackHand()
