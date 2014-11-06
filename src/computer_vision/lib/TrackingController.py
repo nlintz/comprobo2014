@@ -8,11 +8,11 @@ import hashlib
 class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
 		self.window = Helpers.Window("TrackingWindow")
-		# self.filteredImageWindow = Helpers.Window("FilteredImage")
+		self.filteredImageWindow = Helpers.Window("FilteredImage")
 
 		self.renderer = Helpers.ImageRenderer()
 		self.renderer.addWindow(self.window)
-		# self.renderer.addWindow(self.filteredImageWindow)
+		self.renderer.addWindow(self.filteredImageWindow)
 
 		self._stopTracking = False
 		self._videoFeed = videoFeed
@@ -24,16 +24,16 @@ class TrackingController(object):
 		trackingComplete.registerKeyPressed('c', self._trackingComplete)
 		self.window.registerEvent(trackingComplete)
 
-		# saveFilteredImage = Helpers.KeyboardEvent()
-		# trackingComplete.registerKeyPressed('s', self._saveFilteredImage)
-		# self.filteredImageWindow.registerEvent(saveFilteredImage)
+		saveFilteredImage = Helpers.KeyboardEvent()
+		saveFilteredImage.registerKeyPressed('s', self._saveFilteredImage)
+		self.filteredImageWindow.registerEvent(saveFilteredImage)
 
 
 	def _trackingComplete(self):
 		self._stopTracking = True
 
 	def _saveFilteredImage(self):
-		print "Saving Filtered Image"
+		cv2.imwrite(str(time.time())+'.png', self.filteredImageWindow.image)
 
 	def _drawConvexHull(self, contours, convexHulls):
 		for contour in contours:
@@ -92,7 +92,7 @@ class TrackingController(object):
 		return blurredMaskSum
 
 	def _trackHand(self, shouldRender=True):
-		if not self._stopTracking:
+		while not self._stopTracking:
 			ret, image = self._videoFeed.read()
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
 			self.filteredImageWindow.updateImage(np.zeros(image.shape, np.uint8))
@@ -101,9 +101,8 @@ class TrackingController(object):
 			contours = self._contours(filteredImage)
 			convexityDefects = TrackingController._contourConvexityDefects(contours)
 			convexHulls = TrackingController._contourConvexHulls(contours)
-			print 'here'
 			if shouldRender:
-				# self._drawFilteredImage()
+				self._drawFilteredImage(filteredImage)
 				self._drawConvexityDefects(contours, convexityDefects)
 				self._drawConvexHull(contours, convexHulls)
 				self.renderer.showWindows()
