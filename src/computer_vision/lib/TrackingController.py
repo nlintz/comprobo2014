@@ -9,6 +9,7 @@ class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
 		self.window = Helpers.Window("TrackingWindow")
 		self.filteredImageWindow = Helpers.Window("FilteredImage")
+		self.filteredImageWindow.shouldRender = False	
 
 		self.renderer = Helpers.ImageRenderer()
 		self.renderer.addWindow(self.window)
@@ -38,6 +39,9 @@ class TrackingController(object):
 	def _drawConvexHull(self, contours, convexHulls):
 		for contour in contours:
 			cv2.drawContours(self.window.image, [convexHulls[Helpers.hashable(contour)]], -1, (0,0,255), 3)
+	
+	def _drawContours(self, contours):
+		for contour in contours:
 			cv2.drawContours(self.window.image, [contour], -1, (0,255,0), 3)
 			
 	def _drawConvexityDefects(self, contours, convexityDefects):
@@ -47,7 +51,7 @@ class TrackingController(object):
 				for i in range(contourDefects.shape[0]):
 					s,e,f,d = contourDefects[i,0]
 					defectPoint = tuple(contour[f][0])
-					cv2.circle(self.window.image,defectPoint,5,[255,0,0],-1)
+					cv2.circle(self.window.image,defectPoint,5,[255,255,255],-1)
 
 	def _drawFilteredImage(self, filteredImage):
 		self.filteredImageWindow.updateImage(filteredImage)
@@ -72,6 +76,35 @@ class TrackingController(object):
 				# pass
 		return contourConvexityDefects
 
+	@staticmethod
+	def _largestContours(contours, convexityDefects):
+		# largestContours = [(cv2.contourArea(contour), contour) for contour in contours]
+		largestContours = []
+
+		for contour in contours:
+			minX, minY, maxX, maxY = None, None, None, None
+
+			contourDefects = convexityDefects.get(Helpers.hashable(contour), None)
+			if contourDefects is not None:
+				for i in range(contourDefects.shape[0]):
+					s,e,f,d = contourDefects[i,0]
+					defectPoint = tuple(contour[f][0])
+					if minX is None:
+						minX, maxX = defectPoint[0], defectPoint[0]
+						minY, maxY = defectPoint[1], defectPoint[1]
+						largestContour = contour
+					else:
+						if defectPoint[0] < minX:
+							minX = defectPoint[0]
+						if defectPoint[0] > maxX:
+							maxX = defectPoint[0]
+						if defectPoint[1] < minY:
+							minY = defectPoint[1]
+						if defectPoint[1] > maxY:
+							maxY = defectPoint[0]
+				largestContours.append((abs(maxX - minX) * abs(maxY - minY), contour))
+		
+		return sorted(largestContours, key=lambda x:x[0], reverse=True)
 
 	@staticmethod
 	def _contours(image, threshold=100):
@@ -101,9 +134,14 @@ class TrackingController(object):
 			contours = self._contours(filteredImage)
 			convexityDefects = TrackingController._contourConvexityDefects(contours)
 			convexHulls = TrackingController._contourConvexHulls(contours)
+
+			largestContours = [countourMass[1] for countourMass	in self._largestContours(contours, convexityDefects)]
+			contours = largestContours[0:1]
+
 			if shouldRender:
 				self._drawFilteredImage(filteredImage)
 				self._drawConvexityDefects(contours, convexityDefects)
+				self._drawContours(contours)
 				self._drawConvexHull(contours, convexHulls)
 				self.renderer.showWindows()
 
