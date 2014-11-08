@@ -53,7 +53,10 @@ class TrackingController(object):
 				for i in range(contourDefects.shape[0]):
 					s,e,f,d = contourDefects[i,0]
 					defectPoint = tuple(contour[f][0])
+					start = tuple(contour[s][0])
+					end = tuple(contour[e][0])
 					cv2.circle(self.window.image,defectPoint,5,[255,255,255],-1)
+					cv2.line(self.window.image, end, defectPoint, (255,0,0), 2)
 
 	def _drawFilteredImage(self, filteredImage):
 		self.filteredImageWindow.updateImage(filteredImage)
@@ -108,12 +111,31 @@ class TrackingController(object):
 		return sorted(largestContours, key=lambda x:x[0], reverse=True)
 
 	@staticmethod
-	def _countFingers(contours, convexityDefects):
+	def _evaluateFingerGesture(contours, convexityDefects):
+		depthsAndPoints = []
 		for contour in contours:
 			contourDefects = convexityDefects.get(Helpers.hashable(contour), None)
 			if contourDefects is not None:
 				for i in range(contourDefects.shape[0]):
 					start,end,depth_point,depth = contourDefects[i,0]
+					depthsAndPoints.append((depth, tuple(contour[depth_point][0])))
+		
+		if len(depthsAndPoints):
+			depths = map(lambda x:x[0], depthsAndPoints)
+			depthPoints = map(lambda x:x[1], depthsAndPoints)
+			maxDepth = max(depths)
+
+			centerOfMass = (int(sum(map(lambda x: x[0], depthPoints)) / float(len(depthPoints))), 
+				int(sum(map(lambda x: x[1], depthPoints)) / float(len(depthPoints))))
+			fingerPoint = depthPoints[depths.index(maxDepth)]
+			# print fingerPoint, centerOfMass
+
+			if len(filter(lambda x: x>maxDepth/2, depths)) < 5:
+				return ("GO", centerOfMass, fingerPoint)
+
+			else:
+				return ("STOP",)
+
 	@staticmethod
 	def _contours(image, threshold=100):
 		edges = cv2.Canny(copy.deepcopy(image), threshold, threshold*2)
@@ -145,13 +167,22 @@ class TrackingController(object):
 			convexHulls = TrackingController._contourConvexHulls(contours)
 			contourSizes = self._largestContours(contours, convexityDefects)
 			largestContours = [countourMass[1] for countourMass	in contourSizes]
-			contours = largestContours[0:3]
-			TrackingController._countFingers(contours, convexityDefects)
+			contours = largestContours[0:2]
+			
+			gesture = TrackingController._evaluateFingerGesture(contours, convexityDefects)
+			if gesture and gesture[0] == "STOP":
+				print "STOP"
+			else:
+				print "GO"
+				gestureType, centerOfMass, fingerPoint = gesture
+				cv2.circle(self.window.image,centerOfMass,10,[0,100,255],-1)
+				cv2.circle(self.window.image,fingerPoint,20,[255,100,255],-1)
+
 
 			if shouldRender:
 				self._drawFilteredImage(filteredImage)
+				# self._drawContours(contours)
 				self._drawConvexityDefects(contours, convexityDefects)
-				self._drawContours(contours)
 				self._drawConvexHull(contours, convexHulls)
 				self.renderer.showWindows()
 
@@ -170,3 +201,9 @@ class TrackingController(object):
 # T = TrackingController(cap, colors)
 # while 1:
 # 	T._trackHand()
+
+#ONE FINGER = [14306, 14306, 2737, 2737, 2676, 2676, 2412, 2329, 1262, 1262, 772, 772, 243, 243, 227, 227, 222, 222, 210, 210, 190, 190, 186, 186, 186, 186, 186, 186, 176, 176, 114, 114, 114, 114, 114, 114, 114, 114, 114, 114]
+#TWO FINGERS = [27656, 27656, 12466, 12448, 5532, 5532, 3845, 3788, 1932, 1932, 878, 878, 805, 805, 744, 744, 519, 519, 256, 256, 186, 162, 162, 162, 162, 114, 114, 114, 114, 114, 114, 114, 114]
+#THREE FINGERS = [22703, 22694, 21990, 21990, 5939, 5939, 4312, 4311, 2513, 2500, 931, 869, 162, 114, 114, 114, 114, 114, 114, 114, 114]
+#FOUR FINGERS = [28157, 28157, 26261, 26173, 23948, 23948, 7161, 7161, 5445, 5445, 1586, 1577, 226, 226, 217, 217, 162, 162, 162, 162, 142, 142, 114, 114, 114, 114, 114, 114, 114, 114]
+#FIVE FINGERS = [25205, 25205, 24124, 24033, 21163, 21163, 20783, 20767, 7027, 6988, 5993, 5993, 1445, 1439, 543, 512, 405, 162, 162, 142, 114, 114, 114, 114, 114, 114, 114, 114]
