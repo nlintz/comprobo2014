@@ -4,7 +4,7 @@ import Helpers
 import copy
 import time
 import hashlib
-from GestureMemory import GestureMemory
+from GestureMemory import GestureMemory, Gestures
 import math
 
 class TrackingController(object):
@@ -111,8 +111,7 @@ class TrackingController(object):
 		
 		return sorted(largestContours, key=lambda x:x[0], reverse=True)
 
-	@staticmethod
-	def _evaluateFingerGesture(contours, convexityDefects):
+	def _evaluateFingerGesture(self, contours, convexityDefects):
 		depthsAndPoints = []
 		for contour in contours:
 			contourDefects = convexityDefects.get(Helpers.hashable(contour), None)
@@ -131,10 +130,13 @@ class TrackingController(object):
 			fingerPoint = depthPoints[depths.index(maxDepth)]
 
 			if len(filter(lambda x: x>maxDepth/2, depths)) < 5:
-				return ("GO", centerOfMass, fingerPoint)
+				"this happened"
+				self.gestureMemory.receiveGesture(Gestures.Go, centerOfMass)
+				return (Gestures.Go, centerOfMass, fingerPoint)
 
 			else:
-				return ("STOP",)
+				return (Gestures.Stop)
+		return Gestures.No_Gesture
 
 	@staticmethod
 	def _fingerDirection(gesture):
@@ -166,7 +168,6 @@ class TrackingController(object):
 
 	def _trackHand(self, shouldRender=True):
 		while not self._stopTracking:
-			self.gestureMemory.receiveGesture()
 			ret, image = self._videoFeed.read()
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
 			self.filteredImageWindow.updateImage(np.zeros(image.shape, np.uint8))
@@ -179,13 +180,16 @@ class TrackingController(object):
 			largestContours = [countourMass[1] for countourMass	in contourSizes]
 			contours = largestContours[0:2]
 			
-			gesture = TrackingController._evaluateFingerGesture(contours, convexityDefects)
+			gesture = self._evaluateFingerGesture(contours, convexityDefects)
 			if gesture == None:
+				print "this should never happen"
 				continue
 
-			if gesture[0] == "STOP":
+			if gesture == Gestures.Stop:
+
 				print "STOP"
-			elif gesture[0] == "GO":
+			elif gesture == Gestures.Go:
+				print "got hereeeee"
 				gestureType, centerOfMass, fingerPoint = gesture
 				cv2.circle(self.window.image,centerOfMass,10,[0,100,255],-1)
 				cv2.circle(self.window.image,fingerPoint,20,[255,100,255],-1)
