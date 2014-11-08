@@ -119,3 +119,6 @@ class hashable(object):
 			return array(self.__wrapped)
 
 		return self.__wrapped
+
+def subtractVectors(vectorA, vectorB):
+	return (vectorA[0] - vectorB[0], vectorA[1] - vectorB[1])

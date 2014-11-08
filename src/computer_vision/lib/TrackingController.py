@@ -5,6 +5,7 @@ import copy
 import time
 import hashlib
 from GestureMemory import GestureMemory
+import math
 
 class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
@@ -128,13 +129,22 @@ class TrackingController(object):
 			centerOfMass = (int(sum(map(lambda x: x[0], depthPoints)) / float(len(depthPoints))), 
 				int(sum(map(lambda x: x[1], depthPoints)) / float(len(depthPoints))))
 			fingerPoint = depthPoints[depths.index(maxDepth)]
-			# print fingerPoint, centerOfMass
 
 			if len(filter(lambda x: x>maxDepth/2, depths)) < 5:
 				return ("GO", centerOfMass, fingerPoint)
 
 			else:
 				return ("STOP",)
+
+	@staticmethod
+	def _fingerDirection(gesture):
+		gestureType, centerOfMass, fingerPoint = gesture
+		x, y = Helpers.subtractVectors(fingerPoint, centerOfMass)
+		fingerAngle = math.degrees(math.atan2(y, x))
+		fingerAngleDirections = [("RIGHT",0), ("UP",90), ("LEFT",180)]
+		direction = (np.abs(np.array(map(lambda x:x[1], fingerAngleDirections)) - abs(fingerAngle))).argmin()
+		return map(lambda x:x[0], fingerAngleDirections)[direction]
+
 
 	@staticmethod
 	def _contours(image, threshold=100):
@@ -170,13 +180,21 @@ class TrackingController(object):
 			contours = largestContours[0:2]
 			
 			gesture = TrackingController._evaluateFingerGesture(contours, convexityDefects)
-			if gesture and gesture[0] == "STOP":
+			if gesture == None:
+				continue
+
+			if gesture[0] == "STOP":
 				print "STOP"
-			else:
-				print "GO"
+			elif gesture[0] == "GO":
 				gestureType, centerOfMass, fingerPoint = gesture
 				cv2.circle(self.window.image,centerOfMass,10,[0,100,255],-1)
 				cv2.circle(self.window.image,fingerPoint,20,[255,100,255],-1)
+				# x, y = Helpers.subtractVectors(fingerPoint, centerOfMass)
+				# fingerAngle = math.degrees(math.atan2(y, x))
+				# fingerAngleDirections = [("RIGHT",0), ("UP",90), ("LEFT",180)]
+				# direction = (np.abs(np.array(map(lambda x:x[1], fingerAngleDirections)) - abs(fingerAngle))).argmin()
+				# print map(lambda x:x[0], fingerAngleDirections)[direction]
+				print TrackingController._fingerDirection(gesture)
 
 
 			if shouldRender:
