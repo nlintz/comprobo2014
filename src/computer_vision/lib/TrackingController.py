@@ -78,7 +78,6 @@ class TrackingController(object):
 
 	@staticmethod
 	def _largestContours(contours, convexityDefects):
-		# largestContours = [(cv2.contourArea(contour), contour) for contour in contours]
 		largestContours = []
 
 		for contour in contours:
@@ -107,6 +106,14 @@ class TrackingController(object):
 		return sorted(largestContours, key=lambda x:x[0], reverse=True)
 
 	@staticmethod
+	def _countFingers(contours, convexityDefects):
+		for contour in contours:
+			contourDefects = convexityDefects.get(Helpers.hashable(contour), None)
+			if contourDefects is not None:
+				for i in range(contourDefects.shape[0]):
+					start,end,depth_point,depth = contourDefects[i,0]
+					print depth
+	@staticmethod
 	def _contours(image, threshold=100):
 		edges = cv2.Canny(copy.deepcopy(image), threshold, threshold*2)
 		contours, _ = cv2.findContours(copy.deepcopy(edges), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -134,9 +141,10 @@ class TrackingController(object):
 			contours = self._contours(filteredImage)
 			convexityDefects = TrackingController._contourConvexityDefects(contours)
 			convexHulls = TrackingController._contourConvexHulls(contours)
-
-			largestContours = [countourMass[1] for countourMass	in self._largestContours(contours, convexityDefects)]
-			contours = largestContours[0:1]
+			contourSizes = self._largestContours(contours, convexityDefects)
+			largestContours = [countourMass[1] for countourMass	in contourSizes]
+			contours = largestContours[0:3]
+			TrackingController._countFingers(contours, convexityDefects)
 
 			if shouldRender:
 				self._drawFilteredImage(filteredImage)

@@ -19,7 +19,7 @@ class HandGestureRecognizer(object):
 
 	def calibrate(self):
 		self._trackingController._calibrationColors = self._calibrationController.calibrateColors()
-		# print map(lambda x:list(x), self._trackingController._calibrationColors)
+		print map(lambda x:list(x), self._trackingController._calibrationColors)
 
 	def trackHand(self,calibrationColors=None):
 		if calibrationColors != None:
@@ -29,4 +29,7 @@ class HandGestureRecognizer(object):
 cap = cv2.VideoCapture(0)
 h = HandGestureRecognizer(cap)
 # h.calibrate()
-h.trackHand([[95, 107, 149], [102, 111, 149], [121, 126, 161], [116, 121, 164], [118, 126, 160], [119, 130, 162], [117, 126, 163], [109, 114, 136], [120, 122, 147], [111, 111, 141], [102, 104, 155]])
+
+colors = [[206, 182, 174], [202, 188, 170], [199, 186, 185], [202, 170, 153], [208, 179, 166], [211, 166, 140], [200, 159, 141], [204, 166, 146], [202, 162, 142], [193, 161, 150], [199, 160, 142], [192, 170, 162], [200, 178, 170]]
+
+h.trackHand(colors)
