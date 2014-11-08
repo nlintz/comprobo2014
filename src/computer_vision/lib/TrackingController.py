@@ -4,6 +4,7 @@ import Helpers
 import copy
 import time
 import hashlib
+from GestureMemory import GestureMemory
 
 class TrackingController(object):
 	def __init__(self, videoFeed, calibrationColors=None):
@@ -28,6 +29,7 @@ class TrackingController(object):
 		saveFilteredImage = Helpers.KeyboardEvent()
 		saveFilteredImage.registerKeyPressed('s', self._saveFilteredImage)
 		self.filteredImageWindow.registerEvent(saveFilteredImage)
+		self.gestureMemory = GestureMemory()
 
 
 	def _trackingComplete(self):
@@ -112,7 +114,6 @@ class TrackingController(object):
 			if contourDefects is not None:
 				for i in range(contourDefects.shape[0]):
 					start,end,depth_point,depth = contourDefects[i,0]
-					print depth
 	@staticmethod
 	def _contours(image, threshold=100):
 		edges = cv2.Canny(copy.deepcopy(image), threshold, threshold*2)
@@ -133,6 +134,7 @@ class TrackingController(object):
 
 	def _trackHand(self, shouldRender=True):
 		while not self._stopTracking:
+			self.gestureMemory.receiveGesture()
 			ret, image = self._videoFeed.read()
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
 			self.filteredImageWindow.updateImage(np.zeros(image.shape, np.uint8))
