@@ -5,9 +5,11 @@ import copy
 import time
 import hashlib
 import math
+from PythonEventEmitter.EventEmitter import EventEmitter
 
-class TrackingController(object):
+class TrackingController(EventEmitter):
 	def __init__(self, videoFeed, calibrationColors=None):
+		super(TrackingController, self).__init__()
 		self.window = Helpers.Window("TrackingWindow")
 		self.filteredImageWindow = Helpers.Window("FilteredImage")
 		self.filteredImageWindow.shouldRender = False	
@@ -126,7 +128,10 @@ class TrackingController(object):
 
 			centerOfMass = (int(sum(map(lambda x: x[0], depthPoints)) / float(len(depthPoints))), 
 				int(sum(map(lambda x: x[1], depthPoints)) / float(len(depthPoints))))
+			
+			# fingerPoint = max(depthPoints, key=lambda x:((centerOfMass[0]-x[0])**2+(centerOfMass[1]-x[1])**2)**.5)
 			fingerPoint = depthPoints[depths.index(maxDepth)]
+			# fingerPoint = depthPoints[depthPoints.index(maxDepth)]
 
 			if len(filter(lambda x: x>maxDepth/2, depths)) < 5:
 				return ("GO", centerOfMass, fingerPoint)
@@ -139,7 +144,7 @@ class TrackingController(object):
 		gestureType, centerOfMass, fingerPoint = gesture
 		x, y = Helpers.subtractVectors(fingerPoint, centerOfMass)
 		fingerAngle = math.degrees(math.atan2(y, x))
-		fingerAngleDirections = [("RIGHT",0), ("UP",90), ("LEFT",180)]
+		fingerAngleDirections = [("left",0), ("up",90), ("right",180)]
 		direction = (np.abs(np.array(map(lambda x:x[1], fingerAngleDirections)) - abs(fingerAngle))).argmin()
 		return map(lambda x:x[0], fingerAngleDirections)[direction]
 
@@ -163,12 +168,15 @@ class TrackingController(object):
 		return blurredMaskSum
 
 	def _trackHand(self, shouldRender=True):
-		while not self._stopTracking:
+		if not self._stopTracking:
 			ret, image = self._videoFeed.read()
+
+			if image == None:
+				return
 			self.window.updateImage(np.zeros(image.shape, np.uint8))
 			self.filteredImageWindow.updateImage(np.zeros(image.shape, np.uint8))
 
-			filteredImage = cv2.cvtColor(TrackingController._filterHandFromImage(image, self._calibrationColors), cv2.COLOR_GRAY2BGR)
+			filteredImage = cv2.cvtColor(TrackingController._filterHandFromImage(copy.deepcopy(image), self._calibrationColors), cv2.COLOR_GRAY2BGR)
 			contours = self._contours(filteredImage)
 			convexityDefects = TrackingController._contourConvexityDefects(contours)
 			convexHulls = TrackingController._contourConvexHulls(contours)
@@ -177,21 +185,17 @@ class TrackingController(object):
 			contours = largestContours[0:2]
 			
 			gesture = TrackingController._evaluateFingerGesture(contours, convexityDefects)
-			if gesture == None:
-				continue
+			if gesture != None:
 
-			if gesture[0] == "STOP":
-				print "STOP"
-			elif gesture[0] == "GO":
-				gestureType, centerOfMass, fingerPoint = gesture
-				cv2.circle(self.window.image,centerOfMass,10,[0,100,255],-1)
-				cv2.circle(self.window.image,fingerPoint,20,[255,100,255],-1)
-				# x, y = Helpers.subtractVectors(fingerPoint, centerOfMass)
-				# fingerAngle = math.degrees(math.atan2(y, x))
-				# fingerAngleDirections = [("RIGHT",0), ("UP",90), ("LEFT",180)]
-				# direction = (np.abs(np.array(map(lambda x:x[1], fingerAngleDirections)) - abs(fingerAngle))).argmin()
-				# print map(lambda x:x[0], fingerAngleDirections)[direction]
-				print TrackingController._fingerDirection(gesture)
+				if gesture[0] == "STOP":
+					self.emit("stop")
+					print "STOP"
+				elif gesture[0] == "GO":
+					gestureType, centerOfMass, fingerPoint = gesture
+					cv2.circle(self.window.image,centerOfMass,10,[0,100,255],-1)
+					cv2.circle(self.window.image,fingerPoint,20,[255,100,255],-1)
+					print TrackingController._fingerDirection(gesture)
+					self.emit(TrackingController._fingerDirection(gesture))
 
 
 			if shouldRender:

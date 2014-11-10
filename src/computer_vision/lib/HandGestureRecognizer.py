@@ -5,6 +5,8 @@ import random
 import time
 from CalibrationController import CalibrationController
 from TrackingController import TrackingController
+from NeatoController import NeatoController
+import rospy
 
 class HandGestureRecognizer(object):
 	""" Class for converting video footage to a hand gesture 
@@ -16,6 +18,7 @@ class HandGestureRecognizer(object):
 		self._videoFeed = videoFeed
 		self._calibrationController = CalibrationController(self._videoFeed)
 		self._trackingController = TrackingController(self._videoFeed, [])
+		self._neatoController = NeatoController()
 
 	def calibrate(self):
 		self._trackingController._calibrationColors = self._calibrationController.calibrateColors()
@@ -24,12 +27,19 @@ class HandGestureRecognizer(object):
 	def trackHand(self,calibrationColors=None):
 		if calibrationColors != None:
 			self._trackingController._calibrationColors = calibrationColors
-		self._trackingController._trackHand()
+
+		self._trackingController.on('up', self._neatoController.up)
+		self._trackingController.on('left', self._neatoController.left)
+		self._trackingController.on('right', self._neatoController.right)
+		rospy.init_node('rospy_controller', anonymous=True)
+		# r = rospy.Rate(10) # 10hz
+		while not rospy.is_shutdown():
+			self._trackingController._trackHand()
 
 cap = cv2.VideoCapture(0)
 h = HandGestureRecognizer(cap)
 # h.calibrate()
 
-colors = [[206, 182, 174], [202, 188, 170], [199, 186, 185], [202, 170, 153], [208, 179, 166], [211, 166, 140], [200, 159, 141], [204, 166, 146], [202, 162, 142], [193, 161, 150], [199, 160, 142], [192, 170, 162], [200, 178, 170]]
+colors = [[174, 175, 146], [178, 170, 141], [184, 176, 140], [183, 168, 132], [177, 171, 135], [182, 167, 131], [179, 183, 152], [197, 188, 155], [185, 187, 169], [191, 196, 182], [197, 196, 179], [194, 191, 167], [200, 195, 176], [189, 182, 150], [198, 186, 162], [196, 181, 153]]
 
 h.trackHand(colors)
