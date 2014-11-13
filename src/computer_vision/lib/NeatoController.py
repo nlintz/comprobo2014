@@ -3,7 +3,7 @@ import rospy
 
 class NeatoController():
 	def __init__(self):
-		self.publisher = rospy.Publisher('cmd_vel_mux/input/teleop', Twist, queue_size=10)
+		self.publisher = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist, queue_size=10)
 	
 	def left(self):
 		self.publisher.publish(Twist(linear=Vector3(0.3, 0.0, 0), angular=Vector3(z=.8)))
