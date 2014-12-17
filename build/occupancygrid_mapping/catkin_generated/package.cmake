@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "occupancygrid_mapping")
+set(occupancygrid_mapping_MAINTAINER "pruvolo <pruvolo@todo.todo>")
+set(occupancygrid_mapping_DEPRECATED "")
+set(occupancygrid_mapping_VERSION "0.0.0")
+set(occupancygrid_mapping_BUILD_DEPENDS "rospy" "std_msgs" "sensor_msgs")
+set(occupancygrid_mapping_RUN_DEPENDS "rospy" "std_msgs" "sensor_msgs")
+set(occupancygrid_mapping_BUILDTOOL_DEPENDS "catkin")

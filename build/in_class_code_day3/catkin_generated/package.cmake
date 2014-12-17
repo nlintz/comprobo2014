@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "in_class_code_day3")
+set(in_class_code_day3_MAINTAINER "pruvolo <pruvolo@todo.todo>")
+set(in_class_code_day3_DEPRECATED "")
+set(in_class_code_day3_VERSION "0.0.0")
+set(in_class_code_day3_BUILD_DEPENDS "roscpp" "rospy" "std_msgs")
+set(in_class_code_day3_RUN_DEPENDS "roscpp" "rospy" "std_msgs")
+set(in_class_code_day3_BUILDTOOL_DEPENDS "catkin")

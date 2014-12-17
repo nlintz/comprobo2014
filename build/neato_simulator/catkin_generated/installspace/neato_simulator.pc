@@ -1,0 +1,8 @@
+prefix=/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/install
+
+Name: neato_simulator
+Description: Description of neato_simulator
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/install/lib 
+Requires: 

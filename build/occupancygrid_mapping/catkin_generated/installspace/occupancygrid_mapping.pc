@@ -1,0 +1,8 @@
+prefix=/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/install
+
+Name: occupancygrid_mapping
+Description: Description of occupancygrid_mapping
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/install/lib 
+Requires: 

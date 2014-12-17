@@ -1,0 +1,8 @@
+prefix=/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/devel
+
+Name: warmup_project
+Description: Description of warmup_project
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/nlintz/Documents/Olin/2014-2015/Fall/CompRobo/comprobo2014/devel/lib 
+Requires: 
