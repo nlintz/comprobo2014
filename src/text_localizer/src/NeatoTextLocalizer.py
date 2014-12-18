@@ -94,6 +94,5 @@ class NeatoTextLocalizer(object):
 if __name__ == "__main__":
 	print "Neato Text Localizer: "
 	img = cv2.imread('src/StrokeWidthTransform/test/images/emergency_exit.jpg')
-	print img
 	neato = NeatoTextLocalizer(img, debugMode=True)
 	neato.run()
